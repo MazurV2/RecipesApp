@@ -1,4 +1,4 @@
-﻿namespace RecipesApi
+﻿namespace RecipesApi.Entities
 {
     public class User
     {

@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using RecipesApi;
+using RecipesApi.Entities;
 
 var builder = WebApplication.CreateBuilder(args);
 

@@ -1,12 +1,5 @@
-﻿namespace RecipesApi
+﻿namespace RecipesApi.Entities
 {
-    public enum DifficultyLevel
-    {
-        Easy = 1,
-        Medium = 2,
-        Hard = 3
-    }
-
     public class Recipe
     {
         public int Id { get; set; }

@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using RecipesApi.DTOs;
+using RecipesApi.DTOs.Ingredient;
 using RecipesApi.Entities;
 
 namespace RecipesApi.Controllers
@@ -63,7 +63,7 @@ namespace RecipesApi.Controllers
                 Name = createIngredientDTO.Name
             };
 
-            // Dodaj nowy obiekt Ingredient do kontekstu i zapisz zmiany w bazie danych
+            // Dodaj nowy Ingredient do bazy danych
             _context.Ingredients.Add(ingredient);
             await _context.SaveChangesAsync();
 

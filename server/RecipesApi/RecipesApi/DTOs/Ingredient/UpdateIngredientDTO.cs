@@ -1,4 +1,4 @@
-﻿namespace RecipesApi.DTOs
+﻿namespace RecipesApi.DTOs.Ingredient
 {
     public class UpdateIngredientDTO
     {

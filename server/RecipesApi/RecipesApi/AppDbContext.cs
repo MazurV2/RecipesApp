@@ -22,7 +22,7 @@ namespace RecipesApi
 
             modelBuilder.Entity<RecipeIngredient>()
                 .HasOne(ri => ri.Recipe)
-                .WithMany(r => r.Ingredients)
+                .WithMany(r => r.RecipeIngredients)
                 .HasForeignKey(ri => ri.RecipeId);
 
             modelBuilder.Entity<RecipeIngredient>()

@@ -73,7 +73,7 @@ namespace RecipesApi.Controllers
         [HttpPost]
         public async Task<ActionResult<RecipeDTO>> CreateRecipe(CreateRecipeDTO createRecipeDTO)
         {
-            // Utwórz nowy obiekt Recipe
+            // Utwórz nowy przepis na podstawie danych z DTO
             var recipe = new Recipe
             {
                 Title = createRecipeDTO.Title,
@@ -95,7 +95,7 @@ namespace RecipesApi.Controllers
                 Difficulty = createRecipeDTO.Difficulty,
             };
 
-            // Dodaj nowy Recipe do bazy danych
+            // Dodaj nowy przepis do bazy danych
             _context.Recipes.Add(recipe);
             await _context.SaveChangesAsync();
 
@@ -154,13 +154,24 @@ namespace RecipesApi.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteRecipe(int id)
         {
-            var recipe = await _context.Recipes.FindAsync(id);
+            var recipe = await _context.Recipes
+                .Include(r => r.RecipeIngredients)
+                    .ThenInclude(ri => ri.Ingredient)
+                .Include(r => r.Steps)
+                .FirstOrDefaultAsync(r => r.Id == id);
 
             if (recipe == null)
             {
                 return NotFound();
             }
 
+            // Usuń powiązane składniki przepisu
+            _context.RecipeIngredients.RemoveRange(recipe.RecipeIngredients);
+
+            // Usuń powiązane kroki przepisu
+            _context.Steps.RemoveRange(recipe.Steps);
+
+            // Usuń przepis
             _context.Recipes.Remove(recipe);
             await _context.SaveChangesAsync();
 
@@ -174,7 +185,8 @@ namespace RecipesApi.Controllers
                     .ThenInclude(ri => ri.Ingredient)
                 .Include(r => r.Steps)
                 .Where(r => r.Id == id)
-                .Select(r => new RecipeDTO {
+                .Select(r => new RecipeDTO 
+                {
                     Id = r.Id,
                     Title = r.Title,
                     Description = r.Description,

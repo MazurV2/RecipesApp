@@ -57,13 +57,13 @@ namespace RecipesApi.Controllers
         [HttpPost]
         public async Task<ActionResult<IngredientDTO>> CreateIngredient(CreateIngredientDTO createIngredientDTO)
         {
-            // Utwórz nowy obiekt Ingredient
+            // Utwórz nowy składnik na podstawie danych z DTO
             var ingredient = new Ingredient
             {
                 Name = createIngredientDTO.Name
             };
 
-            // Dodaj nowy Ingredient do bazy danych
+            // Dodaj nowy składnik do bazy danych
             _context.Ingredients.Add(ingredient);
             await _context.SaveChangesAsync();
 
@@ -107,7 +107,7 @@ namespace RecipesApi.Controllers
                 return NotFound();
             }
 
-            // Usuń składnik z kontekstu i zapisz zmiany w bazie danych
+            // Usuń składnik
             _context.Ingredients.Remove(ingredient);
             await _context.SaveChangesAsync();
             

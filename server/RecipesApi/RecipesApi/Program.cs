@@ -1,22 +1,79 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.OpenApi;
 using RecipesApi;
-using RecipesApi.Entities;
+using RecipesApi.Services;
+using RecipesApi.Settings;
+using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
-
 builder.Services.AddControllers();
+
+// Dodaj serwis autoryzacji
+builder.Services.AddScoped<IAuthService, AuthService>();
+
+// Przekaż ustawienia JWT
+builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("JwtSettings"));
+
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-builder.Services.AddOpenApi();
+builder.Services.AddOpenApi(options =>
+{
+    // Zmodyfikuj domyślnie wygenerowany plik
+    options.AddDocumentTransformer((document, context, cancellationToken) =>
+    {
+        // Zdefiniuj autoryzację (JWT w nagłówku)
+        var scheme = new OpenApiSecurityScheme
+        {
+            Type = SecuritySchemeType.Http,
+            Scheme = "bearer",
+            In = ParameterLocation.Header,
+            BearerFormat = "JWT",
+            Name = "Authorization",
+            Description = "Wprowadź token JWT"
+        };
+
+        // Zapisz definicję pod kluczem "Bearer"
+        document.Components ??= new OpenApiComponents();
+        document.Components.SecuritySchemes ??= new Dictionary<string, IOpenApiSecurityScheme>();
+        document.Components.SecuritySchemes["Bearer"] = scheme;
+
+        // Dodaj definicję jako wymóg dla bezpieczeństwa
+        var requirement = new OpenApiSecurityRequirement
+        {
+            [new OpenApiSecuritySchemeReference("Bearer", document)] = new List<string>()
+        };
+
+        document.Security ??= new List<OpenApiSecurityRequirement>();
+        document.Security.Add(requirement);
+
+        return Task.CompletedTask;
+    });
+});
 
 // AppDbContext configuration
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// Swagger
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+// Weryfikacja tokena
+builder.Services.AddAuthentication()
+    .AddJwtBearer(options =>
+    {
+        // Ustal reguły walidacji tokenu
+        options.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = builder.Configuration["JwtSettings:Issuer"],
+            ValidAudience = builder.Configuration["JwtSettings:Audience"],
+            IssuerSigningKey = new Microsoft.IdentityModel.Tokens.SymmetricSecurityKey
+            (
+                System.Text.Encoding.UTF8.GetBytes(builder.Configuration["JwtSettings:Secret"])
+            )
+        };
+    });
 
 var app = builder.Build();
 
@@ -24,16 +81,17 @@ var app = builder.Build();
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
+
+    // Scalar
+    app.MapScalarApiReference();
 }
 
 app.UseHttpsRedirection();
 
+app.UseAuthentication();
+
 app.UseAuthorization();
 
 app.MapControllers();
-
-// Swagger
-app.UseSwagger();
-app.UseSwaggerUI();
 
 app.Run();

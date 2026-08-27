@@ -1,10 +1,12 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using RecipesApi.DTOs.Ingredient;
 using RecipesApi.DTOs.Recipe;
 using RecipesApi.DTOs.RecipeIngredient;
 using RecipesApi.DTOs.Step;
+using RecipesApi.DTOs.User;
 using RecipesApi.Entities;
+using System.Security.Claims;
 
 namespace RecipesApi.Controllers
 {
@@ -24,9 +26,6 @@ namespace RecipesApi.Controllers
         public async Task<ActionResult<IEnumerable<RecipeDTO>>> GetRecipes()
         {
             var recipes = await _context.Recipes
-                .Include(r => r.RecipeIngredients)
-                    .ThenInclude(ri => ri.Ingredient)
-                .Include(r => r.Steps)
                 .Select(r => new RecipeDTO
                 {
                     Id = r.Id,
@@ -71,11 +70,20 @@ namespace RecipesApi.Controllers
 
         // POST: api/Recipe
         [HttpPost]
+        [Authorize]
         public async Task<ActionResult<RecipeDTO>> CreateRecipe(CreateRecipeDTO createRecipeDTO)
         {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            if (userId == null)
+            {
+                return Unauthorized();
+            }
+
             // Utwórz nowy przepis na podstawie danych z DTO
             var recipe = new Recipe
             {
+                UserId = int.Parse(userId),
                 Title = createRecipeDTO.Title,
                 Description = createRecipeDTO.Description,
                 RecipeIngredients = createRecipeDTO.RecipeIngredients
@@ -101,11 +109,14 @@ namespace RecipesApi.Controllers
 
             var recipeDTO = await GetRecipeDtoById(recipe.Id);
 
+            if (recipeDTO == null) return NotFound();
+
             return CreatedAtAction(nameof(GetRecipe), new { id = recipe.Id }, recipeDTO);
         }
 
         // PUT: api/Recipe/{id}
         [HttpPut("{id}")]
+        [Authorize]
         public async Task<ActionResult<RecipeDTO>> UpdateRecipe(int id, UpdateRecipeDTO updateRecipeDTO)
         {
             var recipe = await _context.Recipes
@@ -117,6 +128,12 @@ namespace RecipesApi.Controllers
             {
                 return NotFound();
             }
+
+            // Sprawdź czy przepis należy do zalogowanego użytkownika
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            
+            if (userId == null) return Unauthorized();
+            if (recipe.UserId != int.Parse(userId)) return Forbid();
 
             recipe.Title = updateRecipeDTO.Title;
             recipe.Description = updateRecipeDTO.Description;
@@ -147,17 +164,17 @@ namespace RecipesApi.Controllers
 
             var recipeDTO = await GetRecipeDtoById(id);
 
-            return Ok(recipe);
+            if (recipeDTO == null) return NotFound();
+
+            return Ok(recipeDTO);
         }
 
         // DELETE: api/Recipe/{id}
         [HttpDelete("{id}")]
+        [Authorize]
         public async Task<IActionResult> DeleteRecipe(int id)
         {
             var recipe = await _context.Recipes
-                .Include(r => r.RecipeIngredients)
-                    .ThenInclude(ri => ri.Ingredient)
-                .Include(r => r.Steps)
                 .FirstOrDefaultAsync(r => r.Id == id);
 
             if (recipe == null)
@@ -165,11 +182,17 @@ namespace RecipesApi.Controllers
                 return NotFound();
             }
 
-            // Usuń powiązane składniki przepisu
-            _context.RecipeIngredients.RemoveRange(recipe.RecipeIngredients);
+            // Sprawdź czy przepis należy do zalogowanego użytkownika
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            
+            if (userId == null) return Unauthorized();
+            if (recipe.UserId != int.Parse(userId)) return Forbid();
 
-            // Usuń powiązane kroki przepisu
-            _context.Steps.RemoveRange(recipe.Steps);
+            // [NIEPOTRZEBNE DZIĘKI USUWANIU KASKADOWEMU]
+            //// Usuń powiązane składniki przepisu
+            //_context.RecipeIngredients.RemoveRange(recipe.RecipeIngredients);
+            //// Usuń powiązane kroki przepisu
+            //_context.Steps.RemoveRange(recipe.Steps);
 
             // Usuń przepis
             _context.Recipes.Remove(recipe);
@@ -181,9 +204,6 @@ namespace RecipesApi.Controllers
         private Task<RecipeDTO?> GetRecipeDtoById(int id)
         {
             return _context.Recipes
-                .Include(r => r.RecipeIngredients)
-                    .ThenInclude(ri => ri.Ingredient)
-                .Include(r => r.Steps)
                 .Where(r => r.Id == id)
                 .Select(r => new RecipeDTO 
                 {

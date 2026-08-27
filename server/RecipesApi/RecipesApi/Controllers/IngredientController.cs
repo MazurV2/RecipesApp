@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using RecipesApi.DTOs.Ingredient;
 using RecipesApi.Entities;
@@ -55,6 +56,7 @@ namespace RecipesApi.Controllers
 
         // POST: api/Ingredient
         [HttpPost]
+        [Authorize]
         public async Task<ActionResult<IngredientDTO>> CreateIngredient(CreateIngredientDTO createIngredientDTO)
         {
             // Utwórz nowy składnik na podstawie danych z DTO
@@ -68,11 +70,9 @@ namespace RecipesApi.Controllers
             await _context.SaveChangesAsync();
 
             // Utwórz obiekt DTO do zwrócenia w odpowiedzi
-            var ingredientDTO = new IngredientDTO
-            {
-                Id = ingredient.Id,
-                Name = ingredient.Name
-            };
+            var ingredientDTO = await GetIngredientDtoById(ingredient.Id);
+
+            if (ingredientDTO == null) return NotFound();
 
             // Zwróć odpowiedź z kodem 201 Created i lokalizacją nowo utworzonego zasobu
             return CreatedAtAction(nameof(GetIngredient), new { id = ingredient.Id }, ingredientDTO);
@@ -80,6 +80,7 @@ namespace RecipesApi.Controllers
 
         // PUT: api/Ingredient/{id}
         [HttpPut("{id}")]
+        [Authorize]
         public async Task<ActionResult<IngredientDTO>> UpdateIngredient(int id, UpdateIngredientDTO updateIngredientDTO)
         {
             // Znajdź składnik o podanym ID
@@ -93,11 +94,16 @@ namespace RecipesApi.Controllers
             ingredient.Name = updateIngredientDTO.Name;
             await _context.SaveChangesAsync();
 
-            return NoContent();
+            var ingredientDTO = await GetIngredientDtoById(id);
+
+            if (ingredientDTO == null) return NotFound();
+
+            return Ok(ingredientDTO);
         }
 
         // DELETE: api/Ingredient/{id}
         [HttpDelete("{id}")]
+        [Authorize]
         public async Task<IActionResult> DeleteIngredient(int id)
         {
             // Znajdź składnik o podanym ID
@@ -112,6 +118,18 @@ namespace RecipesApi.Controllers
             await _context.SaveChangesAsync();
             
             return NoContent();
+        }
+
+        private Task<IngredientDTO?> GetIngredientDtoById(int id)
+        {
+            return _context.Ingredients
+                .Where(i => i.Id == id)
+                .Select(i => new IngredientDTO
+                {
+                    Id = i.Id,
+                    Name = i.Name
+                })
+                .FirstOrDefaultAsync();
         }
     }
 }

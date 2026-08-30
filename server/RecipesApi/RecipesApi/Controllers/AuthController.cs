@@ -1,7 +1,8 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using FluentValidation;
+using Microsoft.AspNetCore.Mvc;
 using RecipesApi.DTOs.Auth;
 using RecipesApi.DTOs.User;
-using RecipesApi.Services;
+using RecipesApi.Services.Interfaces;
 
 
 namespace RecipesApi.Controllers

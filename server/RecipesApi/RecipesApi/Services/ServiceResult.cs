@@ -15,6 +15,5 @@
 
         public static ServiceResult<T> Success(T data) => new ServiceResult<T>(true, data, null);
         public static ServiceResult<T> Failure(string resultMessage) => new ServiceResult<T>(false, default, resultMessage);
-
     }
 }

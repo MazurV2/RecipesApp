@@ -1,20 +1,31 @@
+using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi;
 using RecipesApi;
+using RecipesApi.Filters;
 using RecipesApi.Services;
+using RecipesApi.Services.Interfaces;
 using RecipesApi.Settings;
+using RecipesApi.Validators.Auth;
 using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
-builder.Services.AddControllers();
+builder.Services.AddControllers(options => 
+{
+    options.Filters.Add<ValidationFilter>();
+});
 
-// Dodaj serwis autoryzacji
+// Zarejestruj serwisy
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<ITokenService, TokenService>();
 
 // Przekaż ustawienia JWT
 builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("JwtSettings"));
+
+// Walidatory DTO
+builder.Services.AddValidatorsFromAssemblyContaining<RegisterDTOValidator>();
 
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi(options =>

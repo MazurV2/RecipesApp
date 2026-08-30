@@ -4,7 +4,6 @@ using Microsoft.EntityFrameworkCore;
 using RecipesApi.DTOs.Recipe;
 using RecipesApi.DTOs.RecipeIngredient;
 using RecipesApi.DTOs.Step;
-using RecipesApi.DTOs.User;
 using RecipesApi.Entities;
 using System.Security.Claims;
 

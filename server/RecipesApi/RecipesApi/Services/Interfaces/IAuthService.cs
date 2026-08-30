@@ -1,7 +1,7 @@
 ﻿using RecipesApi.DTOs.Auth;
 using RecipesApi.DTOs.User;
 
-namespace RecipesApi.Services
+namespace RecipesApi.Services.Interfaces
 {
     public interface IAuthService
     {

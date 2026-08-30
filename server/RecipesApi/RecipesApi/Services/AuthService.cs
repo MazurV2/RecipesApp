@@ -1,25 +1,21 @@
-﻿using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
-using Microsoft.IdentityModel.Tokens;
+﻿using FluentValidation;
+using Microsoft.EntityFrameworkCore;
 using RecipesApi.DTOs.Auth;
 using RecipesApi.DTOs.User;
 using RecipesApi.Entities;
-using RecipesApi.Settings;
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
-using System.Text;
+using RecipesApi.Services.Interfaces;
 
 namespace RecipesApi.Services
 {
     public class AuthService : IAuthService
     {
         private readonly AppDbContext _context;
-        private readonly JwtSettings _jwtSettings;
+        private readonly ITokenService _tokenService;
 
-        public AuthService(AppDbContext context, IOptions<JwtSettings> jwtSettings)
+        public AuthService(AppDbContext context, ITokenService tokenService, IValidator<RegisterDTO> registerValidator, IValidator<LoginDTO> loginValidator)
         {
             _context = context;
-            _jwtSettings = jwtSettings.Value;
+            _tokenService = tokenService;
         }
 
         public async Task<ServiceResult<UserDTO>> Register(RegisterDTO registerDTO)
@@ -73,45 +69,18 @@ namespace RecipesApi.Services
                 return ServiceResult<AuthResponseDTO>.Failure("Wprowadzono nieprawidłowy login/email lub hasło.");
             }
 
-            var jwtTokenWithExpiry = GenerateJwtToken(user);
+            // Wygenerowanie tokenu JWT
+            var (token, expiryDate) = _tokenService.GenerateJwtToken(user);
 
             var response = new AuthResponseDTO
             {
-                Token = jwtTokenWithExpiry.Item1,
-                ExpirationDate = jwtTokenWithExpiry.Item2
+                Token = token,
+                ExpirationDate = expiryDate
             };
 
             return ServiceResult<AuthResponseDTO>.Success(response);
         }
 
-        private (string, DateTime) GenerateJwtToken(User user)
-        {
-            // Określ informacje zawarte w tokenie
-            var claims = new[]
-            {
-                new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
-                new Claim(ClaimTypes.Name, user.Username),
-                new Claim(ClaimTypes.Email, user.Email)
-            };
-
-            // Pobierz sekret i stwórz klucz szyfrujący
-            var secretKey = _jwtSettings.Secret;
-            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey));
-            var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-            var expiryDate = DateTime.UtcNow.AddMinutes(_jwtSettings.ExpiryInMinutes);
-
-            // Wygeneruj token (JWT)
-            var token = new JwtSecurityToken(
-                issuer: _jwtSettings.Issuer,
-                audience: _jwtSettings.Audience,
-                claims: claims,
-                expires: expiryDate,
-                signingCredentials: credentials
-                );
-
-            var writtenToken = new JwtSecurityTokenHandler().WriteToken(token);
-
-            return (writtenToken, expiryDate);
-        }
+        
     }
 }

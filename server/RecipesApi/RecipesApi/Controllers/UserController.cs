@@ -135,10 +135,6 @@ namespace RecipesApi.Controllers
                 return NotFound();
             }
 
-            // [NIEPOTRZEBNE DZIĘKI USUAWNIU KASKADOWEMU]
-            //// Usuń powiązane przepisy użytkownika
-            //_context.Recipes.RemoveRange(user.Recipes);
-
             // Usuń użytkownika
             _context.Users.Remove(user);
             await _context.SaveChangesAsync();

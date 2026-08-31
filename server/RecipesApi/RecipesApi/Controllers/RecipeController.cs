@@ -79,6 +79,11 @@ namespace RecipesApi.Controllers
                 return Unauthorized();
             }
 
+            // Sprawdź czy wprowadzone składniki istnieją
+            var ingredientIds = createRecipeDTO.RecipeIngredients.Select(ri => ri.IngredientId).ToList();
+            var result = await CheckForMissingIngredients(ingredientIds);
+            if (result != null) return result;
+
             // Utwórz nowy przepis na podstawie danych z DTO
             var recipe = new Recipe
             {
@@ -95,7 +100,6 @@ namespace RecipesApi.Controllers
                 Steps = createRecipeDTO.Steps
                     .Select(s => new Step
                     {
-                        StepNumber = s.StepNumber,
                         Description = s.Description
                     }).ToList(),
                 Calories = createRecipeDTO.Calories,
@@ -107,8 +111,6 @@ namespace RecipesApi.Controllers
             await _context.SaveChangesAsync();
 
             var recipeDTO = await GetRecipeDtoById(recipe.Id);
-
-            if (recipeDTO == null) return NotFound();
 
             return CreatedAtAction(nameof(GetRecipe), new { id = recipe.Id }, recipeDTO);
         }
@@ -130,9 +132,14 @@ namespace RecipesApi.Controllers
 
             // Sprawdź czy przepis należy do zalogowanego użytkownika
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            
+
             if (userId == null) return Unauthorized();
             if (recipe.UserId != int.Parse(userId)) return Forbid();
+
+            // Sprawdź czy wprowadzone składniki istnieją
+            var ingredientIds = updateRecipeDTO.RecipeIngredients.Select(ri => ri.IngredientId).ToList();
+            var result = await CheckForMissingIngredients(ingredientIds);
+            if (result != null) return result;
 
             recipe.Title = updateRecipeDTO.Title;
             recipe.Description = updateRecipeDTO.Description;
@@ -154,7 +161,6 @@ namespace RecipesApi.Controllers
             recipe.Steps = updateRecipeDTO.Steps
                 .Select(s => new Step
                 {
-                    StepNumber = s.StepNumber,
                     Description = s.Description
                 }).ToList();
 
@@ -162,8 +168,6 @@ namespace RecipesApi.Controllers
             await _context.SaveChangesAsync();
 
             var recipeDTO = await GetRecipeDtoById(id);
-
-            if (recipeDTO == null) return NotFound();
 
             return Ok(recipeDTO);
         }
@@ -183,15 +187,9 @@ namespace RecipesApi.Controllers
 
             // Sprawdź czy przepis należy do zalogowanego użytkownika
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            
+
             if (userId == null) return Unauthorized();
             if (recipe.UserId != int.Parse(userId)) return Forbid();
-
-            // [NIEPOTRZEBNE DZIĘKI USUWANIU KASKADOWEMU]
-            //// Usuń powiązane składniki przepisu
-            //_context.RecipeIngredients.RemoveRange(recipe.RecipeIngredients);
-            //// Usuń powiązane kroki przepisu
-            //_context.Steps.RemoveRange(recipe.Steps);
 
             // Usuń przepis
             _context.Recipes.Remove(recipe);
@@ -199,12 +197,12 @@ namespace RecipesApi.Controllers
 
             return NoContent();
         }
-        
+
         private Task<RecipeDTO?> GetRecipeDtoById(int id)
         {
             return _context.Recipes
                 .Where(r => r.Id == id)
-                .Select(r => new RecipeDTO 
+                .Select(r => new RecipeDTO
                 {
                     Id = r.Id,
                     Title = r.Title,
@@ -228,6 +226,41 @@ namespace RecipesApi.Controllers
                     Difficulty = r.Difficulty.ToString()
                 })
                 .FirstOrDefaultAsync();
+        }
+
+        private async Task<ActionResult?> CheckForMissingIngredients(List<int> ingredientIds)
+        {
+            // Sprawdź czy podane id składników istnieją w bazie
+            var existingIngredientIds = await _context.Ingredients
+                .Where(i => ingredientIds.Contains(i.Id))
+                .Select(i => i.Id)
+                .ToListAsync();
+
+            // Zbierz nieistniejące składniki
+            var missingIngredientIds = ingredientIds.Except(existingIngredientIds).ToList();
+
+            if (missingIngredientIds.Any())
+            {
+                return BadRequest(new
+                {
+                    error = "Wprowadzono nieprawidłowe Id składników",
+                    missing = missingIngredientIds
+                });
+            }
+
+            return null;
+        }
+
+        private async Task<List<int>> GetMissingIngredientIds(List<int> ingredientIds)
+        {
+            // Sprawdź czy podane id składników istnieją w bazie
+            var existingIngredientIds = await _context.Ingredients
+                .Where(i => ingredientIds.Contains(i.Id))
+                .Select(i => i.Id)
+                .ToListAsync();
+
+            // Zwróć nieistniejące składniki
+            return ingredientIds.Except(existingIngredientIds).ToList();
         }
     }
 }

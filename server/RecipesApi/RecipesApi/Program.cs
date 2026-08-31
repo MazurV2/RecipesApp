@@ -24,7 +24,7 @@ builder.Services.AddScoped<ITokenService, TokenService>();
 // Przekaż ustawienia JWT
 builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("JwtSettings"));
 
-// Walidatory DTO
+// Zarejestruj walidatory DTO
 builder.Services.AddValidatorsFromAssemblyContaining<RegisterDTOValidator>();
 
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi

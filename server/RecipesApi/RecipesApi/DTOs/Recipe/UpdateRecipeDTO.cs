@@ -8,6 +8,7 @@ namespace RecipesApi.DTOs.Recipe
     {
         public string Title { get; set; } = string.Empty;
         public string Description { get; set; } = string.Empty;
+        public IFormFile? Image { get; set; }
         public ICollection<UpdateRecipeIngredientDTO> RecipeIngredients { get; set; } = new List<UpdateRecipeIngredientDTO>();
         public ICollection<UpdateStepDTO> Steps { get; set; } = new List<UpdateStepDTO>();
         public int Calories { get; set; } = 0;

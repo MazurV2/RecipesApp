@@ -21,6 +21,11 @@ namespace RecipesApi.Validators.Recipe
                 .NotEmpty().WithMessage("Opis jest wymagany.")
                 .MaximumLength(maxDescriptionLength).WithMessage($"Opis nie może przekraczać {maxDescriptionLength} znaków.");
 
+            RuleFor(x => x.Image)
+                .Must(CheckForValidImage).WithMessage("Przesłany plik nie jest poprawnym formatem obrazu.")
+                .Must(CheckForImageSize).WithMessage("Przesłany obraz przekracza maksymalny dozwolony rozmiar.")
+                .When(x => x.Image != null);
+
             RuleFor(x => x.RecipeIngredients)
                 .NotEmpty().WithMessage("Przepis musi zawierać co najmniej jeden składnik.");
 
@@ -36,6 +41,28 @@ namespace RecipesApi.Validators.Recipe
             // Ustawienie walidatorów dla elementów kolekcji
             RuleForEach(x => x.RecipeIngredients).SetValidator(new CreateRecipeIngredientDTOValidator());
             RuleForEach(x => x.Steps).SetValidator(new CreateStepDTOValidator());
+        }
+
+        private bool CheckForValidImage(IFormFile? image)
+        {
+            // Brak pliku jest dozwolony, więc zwracamy true
+            if (image == null) return true;
+
+            var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".gif" };
+            var imageExtenstion = Path.GetExtension(image.FileName).ToLowerInvariant();
+            
+            return allowedExtensions.Contains(imageExtenstion);
+        }
+
+        private bool CheckForImageSize(IFormFile? image)
+        {
+            // Brak pliku jest dozwolony, więc zwracamy true
+            if (image == null) return true;
+
+            var maxImageSize = 8 * 1024 * 1024; // 8 MB
+            var imageSize = image.Length;
+
+            return imageSize <= maxImageSize;
         }
     }
 }

@@ -20,6 +20,7 @@ builder.Services.AddControllers(options =>
 // Zarejestruj serwisy
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<ITokenService, TokenService>();
+builder.Services.AddScoped<IFileService, FileService>();
 
 // Przekaż ustawienia JWT
 builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("JwtSettings"));

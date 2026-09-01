@@ -5,6 +5,7 @@ using RecipesApi.DTOs.Recipe;
 using RecipesApi.DTOs.RecipeIngredient;
 using RecipesApi.DTOs.Step;
 using RecipesApi.Entities;
+using RecipesApi.Services.Interfaces;
 using System.Security.Claims;
 
 namespace RecipesApi.Controllers
@@ -14,10 +15,13 @@ namespace RecipesApi.Controllers
     public class RecipeController : ControllerBase
     {
         private readonly AppDbContext _context;
+        private readonly IFileService _fileService;
+        private const string _recipeImagesFolder = "images/recipes";
 
-        public RecipeController(AppDbContext context)
+        public RecipeController(AppDbContext context, IFileService fileService)
         {
             _context = context;
+            _fileService = fileService;
         }
 
         // GET: api/Recipe
@@ -59,10 +63,7 @@ namespace RecipesApi.Controllers
         {
             var recipe = await GetRecipeDtoById(id);
 
-            if (recipe == null)
-            {
-                return NotFound();
-            }
+            if (recipe == null) return NotFound();
 
             return Ok(recipe);
         }
@@ -70,7 +71,8 @@ namespace RecipesApi.Controllers
         // POST: api/Recipe
         [HttpPost]
         [Authorize]
-        public async Task<ActionResult<RecipeDTO>> CreateRecipe(CreateRecipeDTO createRecipeDTO)
+        [Consumes("multipart/form-data")]
+        public async Task<ActionResult<RecipeDTO>> CreateRecipe([FromForm] CreateRecipeDTO createRecipeDTO)
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
@@ -84,12 +86,16 @@ namespace RecipesApi.Controllers
             var result = await CheckForMissingIngredients(ingredientIds);
             if (result != null) return result;
 
+            // Zapisz obraz przepisu, jeśli został przesłany
+            string? imageUrl = await SaveImageGetUrl(createRecipeDTO.Image);
+
             // Utwórz nowy przepis na podstawie danych z DTO
             var recipe = new Recipe
             {
                 UserId = int.Parse(userId),
                 Title = createRecipeDTO.Title,
                 Description = createRecipeDTO.Description,
+                ImageUrl = imageUrl,
                 RecipeIngredients = createRecipeDTO.RecipeIngredients
                     .Select(ri => new RecipeIngredient
                     {
@@ -118,23 +124,28 @@ namespace RecipesApi.Controllers
         // PUT: api/Recipe/{id}
         [HttpPut("{id}")]
         [Authorize]
-        public async Task<ActionResult<RecipeDTO>> UpdateRecipe(int id, UpdateRecipeDTO updateRecipeDTO)
+        [Consumes("multipart/form-data")]
+        public async Task<ActionResult<RecipeDTO>> UpdateRecipe(int id, [FromForm] UpdateRecipeDTO updateRecipeDTO)
         {
             var recipe = await _context.Recipes
                 .Include(r => r.RecipeIngredients)
                 .Include(r => r.Steps)
                 .FirstOrDefaultAsync(r => r.Id == id);
 
-            if (recipe == null)
-            {
-                return NotFound();
-            }
+            if (recipe == null) return NotFound();
 
             // Sprawdź czy przepis należy do zalogowanego użytkownika
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
             if (userId == null) return Unauthorized();
             if (recipe.UserId != int.Parse(userId)) return Forbid();
+
+            // Zapisz nowy i usuń stary obraz, jeśli został przesłany
+            string? imageUrl = await SaveImageGetUrl(updateRecipeDTO.Image);
+            if (imageUrl != null)
+            {
+                _fileService.DeleteFile(recipe.ImageUrl);
+            }
 
             // Sprawdź czy wprowadzone składniki istnieją
             var ingredientIds = updateRecipeDTO.RecipeIngredients.Select(ri => ri.IngredientId).ToList();
@@ -143,6 +154,7 @@ namespace RecipesApi.Controllers
 
             recipe.Title = updateRecipeDTO.Title;
             recipe.Description = updateRecipeDTO.Description;
+            recipe.ImageUrl = imageUrl ?? recipe.ImageUrl;
             recipe.Calories = updateRecipeDTO.Calories;
             recipe.Difficulty = updateRecipeDTO.Difficulty;
 
@@ -180,16 +192,16 @@ namespace RecipesApi.Controllers
             var recipe = await _context.Recipes
                 .FirstOrDefaultAsync(r => r.Id == id);
 
-            if (recipe == null)
-            {
-                return NotFound();
-            }
+            if (recipe == null) return NotFound();
 
             // Sprawdź czy przepis należy do zalogowanego użytkownika
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
             if (userId == null) return Unauthorized();
             if (recipe.UserId != int.Parse(userId)) return Forbid();
+
+            // Usuń obraz przepisu, jeśli istnieje
+            _fileService.DeleteFile(recipe.ImageUrl);
 
             // Usuń przepis
             _context.Recipes.Remove(recipe);
@@ -207,6 +219,7 @@ namespace RecipesApi.Controllers
                     Id = r.Id,
                     Title = r.Title,
                     Description = r.Description,
+                    ImageUrl = r.ImageUrl,
                     RecipeIngredients = r.RecipeIngredients
                         .Select(ri => new RecipeIngredientDTO
                         {
@@ -226,6 +239,16 @@ namespace RecipesApi.Controllers
                     Difficulty = r.Difficulty.ToString()
                 })
                 .FirstOrDefaultAsync();
+        }
+
+        private async Task<string?> SaveImageGetUrl(IFormFile? image)
+        {
+            if (image != null && image.Length > 0)
+            {
+                var imageUrl = await _fileService.SaveFileAsync(image, _recipeImagesFolder);
+                return imageUrl;
+            }
+            return null;
         }
 
         private async Task<ActionResult?> CheckForMissingIngredients(List<int> ingredientIds)
@@ -249,18 +272,6 @@ namespace RecipesApi.Controllers
             }
 
             return null;
-        }
-
-        private async Task<List<int>> GetMissingIngredientIds(List<int> ingredientIds)
-        {
-            // Sprawdź czy podane id składników istnieją w bazie
-            var existingIngredientIds = await _context.Ingredients
-                .Where(i => ingredientIds.Contains(i.Id))
-                .Select(i => i.Id)
-                .ToListAsync();
-
-            // Zwróć nieistniejące składniki
-            return ingredientIds.Except(existingIngredientIds).ToList();
         }
     }
 }

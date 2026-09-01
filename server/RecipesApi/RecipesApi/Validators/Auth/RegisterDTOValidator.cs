@@ -8,6 +8,7 @@ namespace RecipesApi.Validators.Auth
         private int minUsernameLength = 3;
         private int maxUsernameLength = 30;
         private int minPasswordLength = 8;
+        private int maxPasswordLength = 30;
 
         public RegisterDTOValidator()
         {
@@ -22,7 +23,13 @@ namespace RecipesApi.Validators.Auth
 
             RuleFor(x => x.Password)
                 .NotEmpty().WithMessage("Hasło jest wymagane.")
-                .MinimumLength(minPasswordLength).WithMessage($"Hasło musi składać się przynajmniej z {minPasswordLength} znaków.");
+                .MinimumLength(minPasswordLength).WithMessage($"Hasło musi składać się przynajmniej z {minPasswordLength} znaków.")
+                .MaximumLength(maxPasswordLength).WithMessage($"Hasło musi składać się co najwyżej z {maxPasswordLength} znaków.")
+                .Matches(@"[a-z]+").WithMessage("Hasło musi zawierać przynajmniej jedną małą literę.")
+                .Matches(@"[A-Z]+").WithMessage("Hasło musi zawierać przynajmniej jedną wielką literę.")
+                .Matches(@"\d+").WithMessage("Hasło musi zawierać przynajmniej jedną cyfrę.")
+                .Matches(@"[!@#$%^&*()_+{}\[\]:;<>,.?~\\/-]+").WithMessage("Hasło musi zawierać przynajmniej jeden znak specjalny.")
+                .Equal(x => x.PasswordConfirmation).WithMessage("Hasła muszą być zgodne.");
         }
     }
 }

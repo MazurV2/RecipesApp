@@ -5,6 +5,7 @@ using RecipesApi.DTOs.Recipe;
 using RecipesApi.DTOs.RecipeIngredient;
 using RecipesApi.DTOs.Step;
 using RecipesApi.Entities;
+using RecipesApi.Pagination;
 using RecipesApi.Services.Interfaces;
 using System.Security.Claims;
 
@@ -26,14 +27,65 @@ namespace RecipesApi.Controllers
 
         // GET: api/Recipe
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<RecipeDTO>>> GetRecipes()
+        public async Task<ActionResult<PagedResults<RecipeDTO>>> GetRecipes([FromQuery] RecipeQueryDTO queryDTO)
         {
-            var recipes = await _context.Recipes
+            // Stwórz bazowe zapytanie do bazy danych
+            var query = _context.Recipes.AsQueryable();
+
+            // Filtruj po szukanej frazie
+            if (!string.IsNullOrWhiteSpace(queryDTO.SearchTerm))
+            {
+                var searchTerm = queryDTO.SearchTerm.ToLower();
+                query = query.Where(r => 
+                    r.Title.ToLower().Contains(searchTerm) || 
+                    r.Description.ToLower().Contains(searchTerm)
+                );
+            }
+
+            // Filtruj po kaloriach
+            if (queryDTO.MinCalories.HasValue)
+            {
+                query = query.Where(r => r.Calories >= queryDTO.MinCalories.Value);
+            }
+            
+            if (queryDTO.MaxCalories.HasValue)
+            {
+                query = query.Where(r => r.Calories <= queryDTO.MaxCalories.Value);
+            }
+
+            // Filtruj po poziomie trudności
+            if (queryDTO.MinDifficulty.HasValue)
+            {
+                query = query.Where(r => (int)r.Difficulty >= queryDTO.MinDifficulty.Value);
+            }
+
+            if (queryDTO.MaxDifficulty.HasValue)
+            {
+                query = query.Where(r => (int)r.Difficulty <= queryDTO.MaxDifficulty.Value);
+            }
+
+            // Sortuj po wybranym polu i kierunku
+            query = queryDTO.SortBy?.ToLower() switch
+            {
+                "title" => queryDTO.SortDescending ? query.OrderByDescending(r => r.Title) : query.OrderBy(r => r.Title),
+                "calories" => queryDTO.SortDescending ? query.OrderByDescending(r => r.Calories) : query.OrderBy(r => r.Calories),
+                "difficulty" => queryDTO.SortDescending ? query.OrderByDescending(r => r.Difficulty) : query.OrderBy(r => r.Difficulty),
+                _ => queryDTO.SortDescending ? query.OrderByDescending(r => r.Id) : query.OrderBy(r => r.Id),
+            };
+
+            // Pobierz całkowitą liczbę przepisów po zastosowaniu filtrów
+            var totalCount = await query.CountAsync();
+
+            // Zastosuj paginację i przekształć wyniki na DTO
+            var recipes = await query
+                .Skip(queryDTO.PageSize * (queryDTO.PageNumber - 1))
+                .Take(queryDTO.PageSize)
                 .Select(r => new RecipeDTO
                 {
                     Id = r.Id,
                     Title = r.Title,
                     Description = r.Description,
+                    ImageUrl = r.ImageUrl,
                     RecipeIngredients = r.RecipeIngredients
                         .Select(ri => new RecipeIngredientDTO
                         {
@@ -54,7 +106,9 @@ namespace RecipesApi.Controllers
                 })
                 .ToListAsync();
 
-            return Ok(recipes);
+            var results = new PagedResults<RecipeDTO>(recipes, totalCount, queryDTO.PageNumber, queryDTO.PageSize);
+
+            return Ok(results);
         }
 
         // GET: api/Recipe/{id}

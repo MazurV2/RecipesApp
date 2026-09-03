@@ -20,9 +20,8 @@ namespace RecipesApi.Services
                 Directory.CreateDirectory(uploadsFolder);
             }
 
-            var fileExtensiion = Path.GetExtension(file.FileName);
-            var uniqueFileName = $"{Guid.NewGuid()}{fileExtensiion}";
-            
+            var uniqueFileName = GetUniQueFileName(file.FileName);
+
             var finalFilePath = Path.Combine(uploadsFolder, uniqueFileName);
 
             using (var fileStream = new FileStream(finalFilePath, FileMode.Create))
@@ -38,8 +37,8 @@ namespace RecipesApi.Services
         {
             if (string.IsNullOrEmpty(filePath)) return false;
 
-            var fullFilePath = Path.Combine(_webHostEnvironment.WebRootPath, filePath);
-
+            var fullFilePath = Path.Combine(GetWebRootPath(), filePath);
+            
             if (File.Exists(fullFilePath))
             {
                 File.Delete(fullFilePath);
@@ -47,6 +46,17 @@ namespace RecipesApi.Services
             }
 
             return false;
+        }
+
+        private string GetWebRootPath()
+        {
+            return _webHostEnvironment.WebRootPath ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
+        }
+
+        private string GetUniQueFileName(string fileName)
+        {
+            var fileExtension = Path.GetExtension(fileName);
+            return $"{Guid.NewGuid()}{fileExtension}";
         }
     }
 }

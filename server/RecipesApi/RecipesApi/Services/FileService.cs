@@ -10,15 +10,19 @@ namespace RecipesApi.Services
         {
             _webHostEnvironment = webHostEnvironment;
         }
-
+        
         public async Task<string> SaveFileAsync(IFormFile file, string filePath)
         {
+            if (file == null) throw new ArgumentNullException(nameof(file));
+            if (string.IsNullOrWhiteSpace(filePath)) throw new ArgumentNullException(nameof(filePath));
+            
             var uploadsFolder = Path.Combine(_webHostEnvironment.WebRootPath, filePath);
 
             if (!Directory.Exists(uploadsFolder))
             {
                 Directory.CreateDirectory(uploadsFolder);
             }
+
 
             var uniqueFileName = GetUniQueFileName(file.FileName);
 

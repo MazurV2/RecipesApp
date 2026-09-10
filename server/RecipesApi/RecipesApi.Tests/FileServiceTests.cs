@@ -7,7 +7,7 @@ using System.Text;
 
 namespace RecipesApi.Tests
 {
-    public class FileServiceTests
+    public class FileServiceTests : IDisposable
     {
         private readonly IWebHostEnvironment _webHostEnvinmentMock;
         private readonly FileService _fileService;
@@ -146,7 +146,7 @@ namespace RecipesApi.Tests
 
         public void Dispose()
         {
-            // Clean up the test directory after tests
+            // Wyczyść tymczasowy katalog testowy po zakończeniu testów
             if (Directory.Exists(_testWebRootPath))
             {
                 Directory.Delete(_testWebRootPath, true);

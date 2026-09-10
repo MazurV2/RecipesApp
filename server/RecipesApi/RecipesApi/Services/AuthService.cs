@@ -12,7 +12,7 @@ namespace RecipesApi.Services
         private readonly AppDbContext _context;
         private readonly ITokenService _tokenService;
 
-        public AuthService(AppDbContext context, ITokenService tokenService, IValidator<RegisterDTO> registerValidator, IValidator<LoginDTO> loginValidator)
+        public AuthService(AppDbContext context, ITokenService tokenService)
         {
             _context = context;
             _tokenService = tokenService;
@@ -64,6 +64,7 @@ namespace RecipesApi.Services
                 u => u.Username == loginDTO.UsernameOrEmail || u.Email == loginDTO.UsernameOrEmail
                 );
 
+            // Sprawdź, czy użytkownik istnieje i czy hasło jest poprawne
             if (user == null || !BCrypt.Net.BCrypt.Verify(loginDTO.Password, user.PasswordHash))
             {
                 return ServiceResult<AuthResponseDTO>.Failure("Wprowadzono nieprawidłowy login/email lub hasło.");
@@ -75,7 +76,7 @@ namespace RecipesApi.Services
             var response = new AuthResponseDTO
             {
                 Token = token,
-                ExpirationDate = expiryDate
+                ExpiryDate = expiryDate
             };
 
             return ServiceResult<AuthResponseDTO>.Success(response);

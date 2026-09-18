@@ -1,10 +1,11 @@
 ﻿using RecipesApi.DTOs.RecipeIngredient;
 using RecipesApi.DTOs.Step;
 using RecipesApi.Entities;
+using RecipesApi.Services.Interfaces;
 
 namespace RecipesApi.DTOs.Recipe
 {
-    public class CreateRecipeDTO
+    public class CreateRecipeDTO : IRecipeDTO
     {
         public string Title { get; set; } = string.Empty;
         public string Description { get; set; } = string.Empty;

@@ -42,7 +42,7 @@ namespace RecipesApi.Tests.Integration_Tests
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
             // Sprawdź, czy użytkownik został dodany do bazy danych
-            var userInDb = await GetUserIfExists(registerDTO.Username);
+            var userInDb = await GetUserIfExistsAsync(registerDTO.Username);
 
             Assert.NotNull(userInDb);
             Assert.Equal(registerDTO.Email, userInDb.Email);
@@ -79,7 +79,7 @@ namespace RecipesApi.Tests.Integration_Tests
             // Arrange
             string password = "TestPassword123!";
 
-            var user = await AddUserToDatabase(password: password);
+            var user = await AddUserToDatabaseAsync(password: password);
 
             var registerDTO = new RegisterDTO
             {
@@ -104,7 +104,7 @@ namespace RecipesApi.Tests.Integration_Tests
         {
             // Arrange
             var password = "TestPassword123!";
-            var user = await AddUserToDatabase(password: password);
+            var user = await AddUserToDatabaseAsync(password: password);
 
             var loginDTO = new LoginDTO
             {
@@ -128,7 +128,7 @@ namespace RecipesApi.Tests.Integration_Tests
         {
             // Arrange
             var userPassword = "TestPassword123!";
-            var user = await AddUserToDatabase(password: userPassword);
+            var user = await AddUserToDatabaseAsync(password: userPassword);
 
             var loginDTO = new LoginDTO
             {
@@ -144,10 +144,10 @@ namespace RecipesApi.Tests.Integration_Tests
         }
 
         // Dodaj użytkownika do bazy danych
-        private async Task<User> AddUserToDatabase(string? username = null, string? email = null, string password = "TestPassword123!")
+        private async Task<User> AddUserToDatabaseAsync(string? username = null, string? email = null, string password = "TestPassword123!")
         {
             // Sprawdź, czy użytkownik o podanej nazwie już istnieje
-            if (username != null && await GetUserIfExists(username) is User existingUser)
+            if (username != null && await GetUserIfExistsAsync(username) is User existingUser)
             {
                 return existingUser;
             }
@@ -172,7 +172,7 @@ namespace RecipesApi.Tests.Integration_Tests
         }
 
         // Sprawdź, czy użytkownik istnieje w bazie danych
-        private async Task<User?> GetUserIfExists(string username)
+        private async Task<User?> GetUserIfExistsAsync(string username)
         {
             using var scope = _factory.Services.CreateScope();
             var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();

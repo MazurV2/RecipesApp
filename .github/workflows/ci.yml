@@ -1,0 +1,30 @@
+name: Build & Test
+
+on: [push]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+    # Pobierz kod z repozytorium
+    - name: Checkout repository
+      uses: actions/checkout@v7
+
+    # Skonfiguruj .NET
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v6
+      with:
+        dotnet-version: '10.0.x'
+
+    # Przywróć zależności
+    - name: Restore dependencies
+      run: dotnet restore server/RecipesApi/RecipesApi.slnx
+      
+    # Skompiluj projekt
+    - name: Build project
+      run: dotnet build server/RecipesApi/RecipesApi.slnx --no-restore --configuration Release
+
+    # Uruchom testy
+    - name: Run tests
+      run: dotnet test server/RecipesApi/RecipesApi.slnx --no-build --configuration Release --verbosity normal

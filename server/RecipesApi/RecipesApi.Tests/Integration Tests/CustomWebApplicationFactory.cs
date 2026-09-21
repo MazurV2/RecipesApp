@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
@@ -11,8 +12,18 @@ namespace RecipesApi.Tests
     {
         private SqliteConnection _connection;
 
+        private static readonly KeyValuePair<string, string?>[] _jwtSettings = new KeyValuePair<string, string?>[]
+        {
+            new("JwtSettings:Secret", "SUPER_SECRET_TEST_KEY_WITH_MORE_THAN_32_CHARACTERS"),
+        };
+
         protected override void ConfigureWebHost(IWebHostBuilder builder)
         {
+            builder.ConfigureAppConfiguration(builder =>
+            {
+                builder.AddInMemoryCollection(_jwtSettings);
+            });
+
             builder.UseWebRoot(Path.Combine(Directory.GetCurrentDirectory(), "wwwroot"));
 
             builder.ConfigureServices(services =>

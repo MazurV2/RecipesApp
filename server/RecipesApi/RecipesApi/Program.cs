@@ -71,6 +71,9 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 builder.Services.AddAuthentication()
     .AddJwtBearer(options =>
     {
+        var jwtSecret = builder.Configuration["JwtSettings:Secret"]
+            ?? throw new InvalidOperationException("Brak klucza JWT");
+
         // Ustal reguły walidacji tokenu
         options.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters
         {
@@ -82,7 +85,7 @@ builder.Services.AddAuthentication()
             ValidAudience = builder.Configuration["JwtSettings:Audience"],
             IssuerSigningKey = new Microsoft.IdentityModel.Tokens.SymmetricSecurityKey
             (
-                System.Text.Encoding.UTF8.GetBytes(builder.Configuration["JwtSettings:Secret"])
+                System.Text.Encoding.UTF8.GetBytes(jwtSecret)
             )
         };
     });

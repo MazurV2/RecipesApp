@@ -196,7 +196,7 @@ namespace RecipesApi.Controllers
 
             // Zapisz nowy i usuń stary obraz, jeśli został przesłany
             string? imageUrl = await SaveImageGetUrl(updateRecipeDTO.Image);
-            if (imageUrl != null)
+            if (imageUrl != null && !string.IsNullOrWhiteSpace(recipe.ImageUrl))
             {
                 _fileService.DeleteFile(recipe.ImageUrl);
             }
@@ -255,7 +255,10 @@ namespace RecipesApi.Controllers
             if (recipe.UserId != int.Parse(userId)) return Forbid();
 
             // Usuń obraz przepisu, jeśli istnieje
-            _fileService.DeleteFile(recipe.ImageUrl);
+            if (!string.IsNullOrWhiteSpace(recipe.ImageUrl))
+            {
+                _fileService.DeleteFile(recipe.ImageUrl);
+            }
 
             // Usuń przepis
             _context.Recipes.Remove(recipe);

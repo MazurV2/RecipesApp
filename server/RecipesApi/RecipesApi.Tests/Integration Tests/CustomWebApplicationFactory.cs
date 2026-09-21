@@ -10,7 +10,7 @@ namespace RecipesApi.Tests
 {
     public class CustomWebApplicationFactory<TProgram> : WebApplicationFactory<TProgram> where TProgram : class
     {
-        private SqliteConnection _connection;
+        private SqliteConnection? _connection;
 
         private static readonly KeyValuePair<string, string?>[] _jwtSettings = new KeyValuePair<string, string?>[]
         {

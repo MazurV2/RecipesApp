@@ -1,26 +1,14 @@
-﻿using Microsoft.EntityFrameworkCore;
-using Microsoft.AspNetCore.Mvc.Testing;
-using Microsoft.Extensions.DependencyInjection;
-using RecipesApi.DTOs.Auth;
+﻿using RecipesApi.DTOs.Auth;
 using System.Net;
 using System.Net.Http.Json;
-using RecipesApi.Entities;
 
 namespace RecipesApi.Tests.Integration_Tests
 {
-    public class AuthControllerTests : IClassFixture<CustomWebApplicationFactory<Program>>
+    public class AuthControllerTests : BaseIntegrationTests, IClassFixture<CustomWebApplicationFactory<Program>>
     {
-        private readonly HttpClient _client;
-        private readonly CustomWebApplicationFactory<Program> _factory;
+        public AuthControllerTests(CustomWebApplicationFactory<Program> factory) : base(factory) { }
 
-        public AuthControllerTests(CustomWebApplicationFactory<Program> factory)
-        {
-            _factory = factory;
-            _client = _factory.CreateClient(new WebApplicationFactoryClientOptions
-            {
-                AllowAutoRedirect = false
-            });
-        }
+        // ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- -----
 
         // Test poprawnej rejestracji użytkownika
         [Fact]
@@ -36,7 +24,7 @@ namespace RecipesApi.Tests.Integration_Tests
             };
 
             // Act
-            var response = await _client.PostAsJsonAsync("/api/Auth/register", registerDTO);
+            var response = await _unauthorizedClient.PostAsJsonAsync("/api/Auth/register", registerDTO);
 
             // Assert
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -66,7 +54,7 @@ namespace RecipesApi.Tests.Integration_Tests
             };
 
             // Act
-            var response = await _client.PostAsJsonAsync("/api/Auth/register", registerDTO);
+            var response = await _unauthorizedClient.PostAsJsonAsync("/api/Auth/register", registerDTO);
 
             // Assert
             Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
@@ -90,7 +78,7 @@ namespace RecipesApi.Tests.Integration_Tests
             };
 
             // Act
-            var response = await _client.PostAsJsonAsync("/api/Auth/register", registerDTO);
+            var response = await _unauthorizedClient.PostAsJsonAsync("/api/Auth/register", registerDTO);
 
             // Assert
             Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
@@ -113,7 +101,7 @@ namespace RecipesApi.Tests.Integration_Tests
             };
 
             // Act
-            var response = await _client.PostAsJsonAsync("/api/Auth/login", loginDTO);
+            var response = await _unauthorizedClient.PostAsJsonAsync("/api/Auth/login", loginDTO);
 
             // Assert
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -137,48 +125,10 @@ namespace RecipesApi.Tests.Integration_Tests
             };
 
             // Act
-            var response = await _client.PostAsJsonAsync("/api/Auth/login", loginDTO);
+            var response = await _unauthorizedClient.PostAsJsonAsync("/api/Auth/login", loginDTO);
             
             // Assert
             Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
-        }
-
-        // Dodaj użytkownika do bazy danych
-        private async Task<User> AddUserToDatabaseAsync(string? username = null, string? email = null, string password = "TestPassword123!")
-        {
-            // Sprawdź, czy użytkownik o podanej nazwie już istnieje
-            if (username != null && await GetUserIfExistsAsync(username) is User existingUser)
-            {
-                return existingUser;
-            }
-
-            using var scope = _factory.Services.CreateScope();
-            var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            
-            // Wygeneruj unikatowe ID dla użytkownika
-            var uniqueId = Guid.NewGuid().ToString("N")[..5];
-
-            var user = new User
-            {
-                Username = username ?? $"user_{uniqueId}",
-                Email = email ?? $"user_{uniqueId}@example.com",
-                PasswordHash = BCrypt.Net.BCrypt.HashPassword(password),
-            };
-
-            dbContext.Users.Add(user);
-            await dbContext.SaveChangesAsync();
-
-            return user;
-        }
-
-        // Sprawdź, czy użytkownik istnieje w bazie danych
-        private async Task<User?> GetUserIfExistsAsync(string username)
-        {
-            using var scope = _factory.Services.CreateScope();
-            var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            
-            var user = await dbContext.Users.Where(u => u.Username == username).FirstOrDefaultAsync();
-            return user;
         }
     }
 }

@@ -1,142 +1,17 @@
-﻿using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc.Testing;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
-using RecipesApi.DTOs.Auth;
-using RecipesApi.DTOs.Recipe;
+﻿using RecipesApi.DTOs.Recipe;
 using RecipesApi.DTOs.RecipeIngredient;
 using RecipesApi.DTOs.Step;
 using RecipesApi.Entities;
 using System.Net;
-using System.Net.Http.Json;
 using System.Text;
 
 namespace RecipesApi.Tests.Integration_Tests
 {
-    public class RecipeControllerTests : IClassFixture<CustomWebApplicationFactory<Program>>
+    public class RecipeControllerTests : BaseIntegrationTests, IClassFixture<CustomWebApplicationFactory<Program>>
     {
-        private readonly HttpClient _unauthorizedClient;
-        private readonly CustomWebApplicationFactory<Program> _factory;
+        public RecipeControllerTests(CustomWebApplicationFactory<Program> factory) : base(factory) { }
 
-        public RecipeControllerTests(CustomWebApplicationFactory<Program> factory)
-        {
-            _factory = factory;
-            _unauthorizedClient = _factory.CreateClient(new WebApplicationFactoryClientOptions
-            {
-                AllowAutoRedirect = false
-            });
-        }
-
-        // Wygeneruj token JWT dla testowego użytkownika
-        private async Task<(HttpClient Client, int UserId)> GetAuthenticatedClientAsync()
-        {
-            var client = _factory.CreateClient(new WebApplicationFactoryClientOptions
-            {
-                AllowAutoRedirect = false
-            });
-
-            var uniqueId = Guid.NewGuid().ToString("N")[..5];
-            var password = "TestPassword123!";
-            int userId;
-
-            // Dodaj użytkownika do bazy danych
-            using (var scope = _factory.Services.CreateScope())
-            {
-                var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-                var user = new User
-                {
-                    Username = $"test_{uniqueId}",
-                    Email = $"test_{uniqueId}@example.com",
-                    PasswordHash = BCrypt.Net.BCrypt.HashPassword(password)
-                };
-                dbContext.Users.Add(user);
-                await dbContext.SaveChangesAsync();
-
-                userId = user.Id;
-            }
-
-            // Zaloguj się, żeby uzyskać token JWT
-            var loginDTO = new LoginDTO
-            {
-                UsernameOrEmail = $"test_{uniqueId}",
-                Password = password
-            };
-
-            var response = await client.PostAsJsonAsync("/api/Auth/login", loginDTO);
-            var authResponse = await response.Content.ReadFromJsonAsync<AuthResponseDTO>();
-            var token = authResponse.Token;
-
-            // Dodaj token JWT do nagłówka
-            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
-
-            return (client, userId);
-        }
-
-        // Dodaj składnik do bazy danych
-        private async Task<Ingredient> AddIngredientToDatabaseAsync(string name = "testIngredient")
-        {
-            using var scope = _factory.Services.CreateScope();
-            var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-
-            // Wygeneruj unikatowe ID dla użytkownika
-            var uniqueId = Guid.NewGuid().ToString("N")[..5];
-
-            var ingredient = new Ingredient
-            {
-                Name = $"{name}_{uniqueId}"
-            };
-
-            dbContext.Ingredients.Add(ingredient);
-            await dbContext.SaveChangesAsync();
-
-            return ingredient;
-        }
-
-        private async Task<User> AddUserToDatabaseAsync()
-        {
-            using var scope = _factory.Services.CreateScope();
-            var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-             
-            var user = new User
-            {
-                Username = "otherUser",
-                Email = "other@example.com",
-                PasswordHash = "hash"
-            };
-
-            dbContext.Users.Add(user);
-            await dbContext.SaveChangesAsync();
-
-            return user;
-        }
-
-        private async Task<Recipe> AddRecipeToDatabaseAsync(int? userId = null)
-        {
-            using var scope = _factory.Services.CreateScope();
-            var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-
-            var recipe = new Recipe
-            {
-                UserId = userId,
-                Title = "Test title",
-                Description = "Test description"
-            };
-
-            dbContext.Recipes.Add(recipe);
-            await dbContext.SaveChangesAsync();
-
-            return recipe;
-        }
-
-        // Sprawdź, czy przepis istnieje w bazie danych
-        private async Task<Recipe?> GetRecipeIfExistsAsync(string title)
-        {
-            using var scope = _factory.Services.CreateScope();
-            var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-
-            var recipe = await dbContext.Recipes.Where(r => r.Title == title).FirstOrDefaultAsync();
-            return recipe;
-        }
+        // ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- -----
 
         private async Task<CreateRecipeDTO> PrepareCreateRecipeDTOAsync(
             string? title = "Test Recipe",
@@ -224,27 +99,17 @@ namespace RecipesApi.Tests.Integration_Tests
             return updateRecipeDTO;
         }
 
-        public async Task ResetDatabasAsync()
-        {
-            using var scope = _factory.Services.CreateScope();
-            var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-
-            dbContext.Recipes.RemoveRange(dbContext.Recipes);
-            dbContext.Users.RemoveRange(dbContext.Users);
-            dbContext.Ingredients.RemoveRange(dbContext.Ingredients);
-
-            await dbContext.SaveChangesAsync();
-        }
-
         private MultipartFormDataContent GetRecipeMultipartContent(CreateRecipeDTO dto, byte[]? imageBytes = null, string fileName = "test.jpg")
         {
             var httpContent = new MultipartFormDataContent();
 
+            // Dane przepisu
             httpContent.Add(new StringContent(dto.Title), nameof(dto.Title));
             httpContent.Add(new StringContent(dto.Description), nameof(dto.Description));
             httpContent.Add(new StringContent(dto.Calories.ToString()), nameof(dto.Calories));
             httpContent.Add(new StringContent(((int)dto.Difficulty).ToString()), nameof(dto.Difficulty));
 
+            // Składniki
             var recipeIngredientsList = dto.RecipeIngredients?.ToList() ?? new List<CreateRecipeIngredientDTO>();
             for (int i = 0; i < recipeIngredientsList.Count; i++)
             {
@@ -253,12 +118,14 @@ namespace RecipesApi.Tests.Integration_Tests
                 httpContent.Add(new StringContent(recipeIngredientsList[i].Unit), $"RecipeIngredients[{i}].Unit");
             }
 
+            // Kroki instrukcji
             var stepsList = dto.Steps?.ToList() ?? new List<CreateStepDTO>();
             for (int i = 0; i < stepsList.Count; i++)
             {
                 httpContent.Add(new StringContent(stepsList[i].Description), $"Steps[{i}].Description");
             }
 
+            // Obraz przepisu
             if (imageBytes != null)
             {
                 var fileContent = new ByteArrayContent(imageBytes);
@@ -328,7 +195,7 @@ namespace RecipesApi.Tests.Integration_Tests
         public async Task GetRecipe_ExistingRecipe_ShouldReturnOK()
         {
             // Arrange
-            await ResetDatabasAsync();
+            await ResetDatabaseAsync();
             var recipe = await AddRecipeToDatabaseAsync();
             var apiURL = $"/api/Recipe/{recipe.Id}";
             var (client, userId) = await GetAuthenticatedClientAsync();
@@ -345,7 +212,7 @@ namespace RecipesApi.Tests.Integration_Tests
         public async Task GetRecipe_NonexistentRecipe_ShouldReturnNotFound()
         {
             // Arrange
-            await ResetDatabasAsync();
+            await ResetDatabaseAsync();
             var apiURL = "/api/Recipe/999";
             var (client, userId) = await GetAuthenticatedClientAsync();
 
@@ -363,7 +230,7 @@ namespace RecipesApi.Tests.Integration_Tests
         public async Task CreateRecipe_ValidData_ShouldReturnCreated()
         {
             // Arrange
-            await ResetDatabasAsync();
+            await ResetDatabaseAsync();
             var apiURL = "/api/Recipe";
             var (client, userId) = await GetAuthenticatedClientAsync();
 
@@ -399,7 +266,7 @@ namespace RecipesApi.Tests.Integration_Tests
         public async Task CreateRecipe_InvalidData_ShouldReturnBadRequest(string title, string description, int calories)
         {
             // Arrange
-            await ResetDatabasAsync();
+            await ResetDatabaseAsync();
             var apiURL = "/api/Recipe";
             var (client, userId) = await GetAuthenticatedClientAsync();
 
@@ -425,7 +292,7 @@ namespace RecipesApi.Tests.Integration_Tests
         public async Task CreateRecipe_InvalidDifficultyLevel_ShouldReturnBadRequest()
         {
             // Arrange
-            await ResetDatabasAsync();
+            await ResetDatabaseAsync();
             var apiURL = "/api/Recipe";
             var (client, userId) = await GetAuthenticatedClientAsync();
 
@@ -450,7 +317,7 @@ namespace RecipesApi.Tests.Integration_Tests
         public async Task CreateRecipe_NoRecipeIngredients_ShouldReturnBadRequest()
         {
             // Arrange
-            await ResetDatabasAsync();
+            await ResetDatabaseAsync();
             var apiURL = "/api/Recipe";
             var (client, userId) = await GetAuthenticatedClientAsync();
 
@@ -473,7 +340,7 @@ namespace RecipesApi.Tests.Integration_Tests
         public async Task CreateRecipe_NoSteps_ShouldReturnBadRequest()
         {
             // Arrange
-            await ResetDatabasAsync();
+            await ResetDatabaseAsync();
             var apiURL = "/api/Recipe";
             var (client, userId) = await GetAuthenticatedClientAsync();
 
@@ -496,7 +363,7 @@ namespace RecipesApi.Tests.Integration_Tests
         public async Task CreateRecipe_InvalidImageFormat_ShouldReturnBadRequest()
         {
             // Arrange
-            await ResetDatabasAsync();
+            await ResetDatabaseAsync();
             var apiURL = "/api/Recipe";
             var (client, userId) = await GetAuthenticatedClientAsync();
 
@@ -519,7 +386,7 @@ namespace RecipesApi.Tests.Integration_Tests
         public async Task CreateRecipe_NoJWT_ShouldReturnUnauthorized()
         {
             // Arrange
-            await ResetDatabasAsync();
+            await ResetDatabaseAsync();
             var apiURL = "/api/Recipe";
 
             var createRecipeDTO = new CreateRecipeDTO
@@ -543,7 +410,7 @@ namespace RecipesApi.Tests.Integration_Tests
         public async Task UpdateRecipe_ValidData_ShouldReturnOK()
         {
             // Arrange
-            await ResetDatabasAsync();
+            await ResetDatabaseAsync();
             var (client, userId) = await GetAuthenticatedClientAsync();
             var recipe = await AddRecipeToDatabaseAsync(userId: userId);
             var apiURL = $"/api/Recipe/{recipe.Id}";
@@ -577,7 +444,7 @@ namespace RecipesApi.Tests.Integration_Tests
         public async Task UpdateRecipe_InvalidData_ShouldReturnBadRequest(string title, string description, int calories)
         {
             // Arrange
-            await ResetDatabasAsync();
+            await ResetDatabaseAsync();
             var (client, userId) = await GetAuthenticatedClientAsync();
 
             var recipe = await AddRecipeToDatabaseAsync(userId);
@@ -603,7 +470,7 @@ namespace RecipesApi.Tests.Integration_Tests
         public async Task UpdateRecipe_NonexistentRecipe_ShouldReturnNotFound()
         {
             // Arrange
-            await ResetDatabasAsync();
+            await ResetDatabaseAsync();
             var apiURL = "/api/Recipe/999";
             var (client, userId) = await GetAuthenticatedClientAsync();
 
@@ -624,7 +491,7 @@ namespace RecipesApi.Tests.Integration_Tests
         public async Task UpdateRecipe_NotOwnedRecipe_ShouldReturnForbid()
         {
             // Arrange
-            await ResetDatabasAsync();
+            await ResetDatabaseAsync();
             var (client, userId) = await GetAuthenticatedClientAsync();
 
             // Dodaj innego użytkownika
@@ -657,7 +524,7 @@ namespace RecipesApi.Tests.Integration_Tests
         public async Task UpdateRecipe_NoJWT_ShouldReturnUnauthorized()
         {
             // Arrange
-            await ResetDatabasAsync();
+            await ResetDatabaseAsync();
             var apiURL = "/api/Recipe/1";
 
             var updateRecipeDTO = await PrepareUpdateRecipeDTOAsync();
@@ -678,7 +545,7 @@ namespace RecipesApi.Tests.Integration_Tests
         public async Task DeleteRecipe_ShouldReturnNoContent()
         {
             // Arrange
-            await ResetDatabasAsync();
+            await ResetDatabaseAsync();
             var (client, userId) = await GetAuthenticatedClientAsync();
 
             // Dodaj przepis do bazy danych
@@ -701,7 +568,7 @@ namespace RecipesApi.Tests.Integration_Tests
         public async Task DeleteRecipe_NonexistentRecipe_ShouldReturnNotFound()
         {
             // Arrange
-            await ResetDatabasAsync();
+            await ResetDatabaseAsync();
             var (client, userId) = await GetAuthenticatedClientAsync();
             var apiURL = $"/api/Recipe/1";
 
@@ -717,7 +584,7 @@ namespace RecipesApi.Tests.Integration_Tests
         public async Task DeleteRecipe_NotOwnedRecipe_ShouldReturnForbid()
         {
             // Arrange
-            await ResetDatabasAsync();
+            await ResetDatabaseAsync();
             var (client, userId) = await GetAuthenticatedClientAsync();
 
             // Dodaj innego użytkownika
@@ -743,7 +610,7 @@ namespace RecipesApi.Tests.Integration_Tests
         public async Task DeleteRecipe_NoJWT_ShouldReturnUnauthorized()
         {
             // Arrange
-            await ResetDatabasAsync();
+            await ResetDatabaseAsync();
             var (client, userId) = await GetAuthenticatedClientAsync();
 
             // Dodaj przepis do bazy danych

@@ -59,6 +59,13 @@ namespace RecipesApi.Controllers
         [Authorize]
         public async Task<ActionResult<IngredientDTO>> CreateIngredient(CreateIngredientDTO createIngredientDTO)
         {
+            var ingredientExists = await _context.Ingredients.AnyAsync(i => i.Name.ToLower() == createIngredientDTO.Name.ToLower());
+
+            if (ingredientExists)
+            {
+                return BadRequest("Składnik o podanej nazwie już istnieje.");
+            }
+
             // Utwórz nowy składnik na podstawie danych z DTO
             var ingredient = new Ingredient
             {
@@ -112,6 +119,12 @@ namespace RecipesApi.Controllers
             {
                 return NotFound();
             }
+
+            // Sprawdź czy składnik nie jest powiązany z przepisem
+            var isReferenced = await _context.RecipeIngredients
+                .AnyAsync(ri => ri.IngredientId == id);
+            
+            if (isReferenced) return Conflict("Nie można usunąć składnika, ponieważ jest wykorzystywany");
 
             // Usuń składnik
             _context.Ingredients.Remove(ingredient);

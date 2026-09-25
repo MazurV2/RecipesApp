@@ -3,7 +3,9 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using RecipesApi.DTOs.Auth;
 using RecipesApi.Entities;
+using System.Collections;
 using System.Net.Http.Json;
+using System.Web;
 
 namespace RecipesApi.Tests.Integration_Tests
 {
@@ -95,7 +97,7 @@ namespace RecipesApi.Tests.Integration_Tests
         // ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- -----
 
         // Dodaj składnik do bazy danych
-        protected async Task<Ingredient> AddIngredientToDatabaseAsync(string name = "testIngredient")
+        protected async Task<Ingredient> AddIngredientToDatabaseAsync(string name = "Test Ingredient")
         {
             using var scope = _factory.Services.CreateScope();
             var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -114,10 +116,24 @@ namespace RecipesApi.Tests.Integration_Tests
             return ingredient;
         }
 
+        // Sprawdź, czy składnik istnieje w bazie danych
+        protected async Task<Ingredient?> GetIngredientIfExists(string name)
+        {
+            using var scope = _factory.Services.CreateScope();
+            var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+            var ingredient = await dbContext.Ingredients.Where(i => i.Name == name).FirstOrDefaultAsync();
+            return ingredient;
+        } 
+
         // ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- -----
-        
+
         // Dodaj przepis do bazy danych
-        protected async Task<Recipe> AddRecipeToDatabaseAsync(int? userId = null)
+        protected async Task<Recipe> AddRecipeToDatabaseAsync(
+            int? userId = null,
+            string title = "Test title",
+            string description = "Test description",
+            ICollection<RecipeIngredient>? recipeIngredients = null)
         {
             using var scope = _factory.Services.CreateScope();
             var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -125,9 +141,19 @@ namespace RecipesApi.Tests.Integration_Tests
             var recipe = new Recipe
             {
                 UserId = userId,
-                Title = "Test title",
-                Description = "Test description"
+                Title = title,
+                Description = description
             };
+
+            if (recipeIngredients != null)
+            {
+                recipe.RecipeIngredients = recipeIngredients.Select(ri => new RecipeIngredient
+                {
+                    IngredientId = ri.IngredientId,
+                    Amount = ri.Amount,
+                    Unit = ri.Unit
+                }).ToList();
+            }
 
             dbContext.Recipes.Add(recipe);
             await dbContext.SaveChangesAsync();
@@ -143,6 +169,32 @@ namespace RecipesApi.Tests.Integration_Tests
 
             var recipe = await dbContext.Recipes.Where(r => r.Title == title).FirstOrDefaultAsync();
             return recipe;
+        }
+
+        // ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- -----
+
+        protected string ToQueryString(object obj)
+        {
+            // Wyciągnij wszystkie parametry
+            var properties = obj.GetType().GetProperties()
+                .Where(p => p.GetValue(obj) != null)
+                .Select(p =>
+                {
+                    var value = p.GetValue(obj);
+
+                    // Rozbij złożone pola
+                    if (value is IEnumerable enumerable && !(value is string))
+                    {
+                        var items = enumerable.Cast<object>()
+                            .Select(i => $"{p.Name}={HttpUtility.UrlEncode(i.ToString())}");
+
+                        return string.Join("&", items);
+                    }
+
+                    return $"{p.Name}={HttpUtility.UrlEncode(value.ToString())}";
+                });
+
+            return string.Join("&", properties);
         }
 
         // ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- -----

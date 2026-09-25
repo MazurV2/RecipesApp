@@ -2,7 +2,9 @@
 using RecipesApi.DTOs.RecipeIngredient;
 using RecipesApi.DTOs.Step;
 using RecipesApi.Entities;
+using RecipesApi.Pagination;
 using System.Net;
+using System.Net.Http.Json;
 using System.Text;
 
 namespace RecipesApi.Tests.Integration_Tests
@@ -13,7 +15,7 @@ namespace RecipesApi.Tests.Integration_Tests
 
         // ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- -----
 
-        private async Task<CreateRecipeDTO> PrepareCreateRecipeDTOAsync(
+        private async Task<CreateRecipeDTO> GetCreateRecipeDTOAsync(
             string? title = "Test Recipe",
             string? description = "Test Description.",
             bool includeRecipeIngredients = true,
@@ -57,7 +59,7 @@ namespace RecipesApi.Tests.Integration_Tests
             return createRecipeDTO;
         }
 
-        private async Task<UpdateRecipeDTO> PrepareUpdateRecipeDTOAsync(
+        private async Task<UpdateRecipeDTO> GetUpdateRecipeDTOAsync(
             string? title = "Updated Test Recipe",
             string? description = "Updated Test Description.",
             bool includeRecipeIngredients = true,
@@ -178,14 +180,56 @@ namespace RecipesApi.Tests.Integration_Tests
         public async Task GetRecipes_ShouldReturnOk()
         {
             // Arrange
+            await ResetDatabaseAsync();
             var apiURL = "/api/Recipe";
             var (client, userId) = await GetAuthenticatedClientAsync();
 
+            // Dodaj przykładowe przepisy
+            await AddRecipeToDatabaseAsync(title: "Kotlet Schabowy");
+            await AddRecipeToDatabaseAsync(title: "Ryż po tajsku");
+            await AddRecipeToDatabaseAsync(title: "Kotlet z ryżem");
+
             // Act
             var response = await client.GetAsync(apiURL);
+            
+            // Assert
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+            var results = await response.Content.ReadFromJsonAsync<PagedResults<RecipeDTO>>();
+            Assert.NotNull(results);
+            Assert.Equal(3, results.TotalCount);
+        }
+
+        // Test pobierania przefiltrowanych przepisów
+        [Fact]
+        public async Task GetRecipes_WithQuery_ShouldReturnFilteredResults()
+        {
+            // Arrange
+            await ResetDatabaseAsync();
+
+            // Dodaj przykładowe przepisy
+            await AddRecipeToDatabaseAsync(title: "Kotlet Schabowy");
+            await AddRecipeToDatabaseAsync(title: "Ryż po tajsku");
+            await AddRecipeToDatabaseAsync(title: "Kotlet z ryżem");
+
+            var queryDTO = new RecipeQueryDTO
+            {
+                SearchTerm = "Ryż",
+                SortBy = "Title"
+            };
+
+            var queryString = ToQueryString(queryDTO);
+            var apiURL = $"/api/Recipe?{queryString}";
+
+            // Act
+            var response = await _unauthorizedClient.GetAsync(apiURL);
 
             // Assert
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+            var results = await response.Content.ReadFromJsonAsync<PagedResults<RecipeDTO>>();
+            Assert.NotNull(results);
+            Assert.Equal(2, results.TotalCount);
         }
 
         // ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- -----
@@ -237,7 +281,7 @@ namespace RecipesApi.Tests.Integration_Tests
             var ingredient = await AddIngredientToDatabaseAsync();
 
             // Przygotuj dane przepisu
-            var createRecipeDTO = await PrepareCreateRecipeDTOAsync();
+            var createRecipeDTO = await GetCreateRecipeDTOAsync();
 
             // Przygotuj obraz przepisu (nagłówek JPEG)
             string testImageName = "testImage.jpg";
@@ -273,7 +317,7 @@ namespace RecipesApi.Tests.Integration_Tests
             var ingredient = await AddIngredientToDatabaseAsync();
 
             // Przygotuj dane przepisu
-            var createRecipeDTO = await PrepareCreateRecipeDTOAsync(
+            var createRecipeDTO = await GetCreateRecipeDTOAsync(
                 title: title,
                 description: description,
                 calories: calories);
@@ -299,7 +343,7 @@ namespace RecipesApi.Tests.Integration_Tests
             var ingredient = await AddIngredientToDatabaseAsync();
 
             // Przygotuj dane przepisu
-            var createRecipeDTO = await PrepareCreateRecipeDTOAsync(includeDifficulty: false);
+            var createRecipeDTO = await GetCreateRecipeDTOAsync(includeDifficulty: false);
 
             var httpContent = GetRecipeMultipartContent(createRecipeDTO);
             // Wstaw nieprawidłowy poziom trudności
@@ -324,7 +368,7 @@ namespace RecipesApi.Tests.Integration_Tests
             var ingredient = await AddIngredientToDatabaseAsync();
 
             // Przygotuj dane przepisu
-            var createRecipeDTO = await PrepareCreateRecipeDTOAsync(includeRecipeIngredients: false);
+            var createRecipeDTO = await GetCreateRecipeDTOAsync(includeRecipeIngredients: false);
 
             var httpContent = GetRecipeMultipartContent(createRecipeDTO);
 
@@ -347,7 +391,7 @@ namespace RecipesApi.Tests.Integration_Tests
             var ingredient = await AddIngredientToDatabaseAsync();
 
             // Przygotuj dane przepisu
-            var createRecipeDTO = await PrepareCreateRecipeDTOAsync(includeSteps: false);
+            var createRecipeDTO = await GetCreateRecipeDTOAsync(includeSteps: false);
 
             var httpContent = GetRecipeMultipartContent(createRecipeDTO);
 
@@ -370,7 +414,7 @@ namespace RecipesApi.Tests.Integration_Tests
             var ingredient = await AddIngredientToDatabaseAsync();
 
             // Przygotuj dane przepisu
-            var createRecipeDTO = await PrepareCreateRecipeDTOAsync();
+            var createRecipeDTO = await GetCreateRecipeDTOAsync();
 
             var httpContent = GetRecipeMultipartContent(createRecipeDTO, Encoding.UTF8.GetBytes("zwykły tekst"), "test.txt");
 
@@ -419,7 +463,7 @@ namespace RecipesApi.Tests.Integration_Tests
             var ingredient = await AddIngredientToDatabaseAsync();
 
             // Przygotuj zaktualizowane dane przepisu
-            var updateRecipeDTO = await PrepareUpdateRecipeDTOAsync();
+            var updateRecipeDTO = await GetUpdateRecipeDTOAsync();
 
             var httpContent = GetRecipeMultipartContent(updateRecipeDTO);
 
@@ -454,7 +498,7 @@ namespace RecipesApi.Tests.Integration_Tests
             var ingredient = await AddIngredientToDatabaseAsync();
 
             // Przygotuj zaktualizowane dane przepisu
-            var updateRecipeDTO = await PrepareUpdateRecipeDTOAsync(title: title, description: description, calories: calories);
+            var updateRecipeDTO = await GetUpdateRecipeDTOAsync(title: title, description: description, calories: calories);
 
             var httpContent = GetRecipeMultipartContent(updateRecipeDTO);
 
@@ -475,7 +519,7 @@ namespace RecipesApi.Tests.Integration_Tests
             var (client, userId) = await GetAuthenticatedClientAsync();
 
             // Przygotuj zaktualizowane dane przepisu
-            var updateRecipeDTO = await PrepareUpdateRecipeDTOAsync();
+            var updateRecipeDTO = await GetUpdateRecipeDTOAsync();
 
             var httpContent = GetRecipeMultipartContent(updateRecipeDTO);
 
@@ -504,7 +548,7 @@ namespace RecipesApi.Tests.Integration_Tests
             var ingredient = await AddIngredientToDatabaseAsync();
 
             // Przygotuj zaktualizowane dane przepisu
-            var updateRecipeDTO = await PrepareUpdateRecipeDTOAsync();
+            var updateRecipeDTO = await GetUpdateRecipeDTOAsync();
 
             var httpContent = GetRecipeMultipartContent(updateRecipeDTO);
 
@@ -527,7 +571,7 @@ namespace RecipesApi.Tests.Integration_Tests
             await ResetDatabaseAsync();
             var apiURL = "/api/Recipe/1";
 
-            var updateRecipeDTO = await PrepareUpdateRecipeDTOAsync();
+            var updateRecipeDTO = await GetUpdateRecipeDTOAsync();
 
             var httpContent = GetRecipeMultipartContent(updateRecipeDTO);
 

@@ -62,7 +62,7 @@ namespace RecipesApi.Controllers
         [Authorize]
         public async Task<ActionResult<UserDTO>> CreateUser(CreateUserDTO createUserDTO)
         {
-            var userExists = await _context.Users.AnyAsync(u => u.Username == createUserDTO.Username || u.Email == createUserDTO.Email);
+            var userExists = await _context.Users.AnyAsync(u => u.Username.ToLower() == createUserDTO.Username.ToLower() || u.Email.ToLower() == createUserDTO.Email.ToLower());
 
             if (userExists)
             {

@@ -63,7 +63,7 @@ namespace RecipesApi.Controllers
 
             if (ingredientExists)
             {
-                return BadRequest("Składnik o podanej nazwie już istnieje.");
+                return Conflict("Składnik o podanej nazwie już istnieje.");
             }
 
             // Utwórz nowy składnik na podstawie danych z DTO
@@ -95,6 +95,14 @@ namespace RecipesApi.Controllers
             if (ingredient == null)
             {
                 return NotFound();
+            }
+
+            // Sprawdź, czy istnieje już składnik o podanej nazwie
+            var ingredientWithSameNameExists = await _context.Ingredients.AnyAsync(i => i.Id != id && i.Name.ToLower() == updateIngredientDTO.Name.ToLower());
+
+            if (ingredientWithSameNameExists)
+            {
+                return BadRequest("Składnik o podanej nazwie już istnieje.");
             }
 
             // Zaktualizuj i zapisz właściwości składnika

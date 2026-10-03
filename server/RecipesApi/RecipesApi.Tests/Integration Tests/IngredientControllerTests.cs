@@ -73,7 +73,7 @@ namespace RecipesApi.Tests.Integration_Tests
 
         // Test poprawnego dodawania składnika
         [Fact]
-        public async Task CreateIngredient_ValidData_ShouldReturnOK()
+        public async Task CreateIngredient_ValidData_ShouldReturnCreated()
         {
             // Arrange
             var (client, _) = await GetAuthenticatedClientAsync();
@@ -115,7 +115,7 @@ namespace RecipesApi.Tests.Integration_Tests
 
         // Test dodawania istniejącego składnika
         [Fact]
-        public async Task CreateIngredient_AlreadyExists_ShouldReturnBadRequest()
+        public async Task CreateIngredient_DuplicateData_ShouldReturnConflict()
         {
             // Arrange
             var (client, _) = await GetAuthenticatedClientAsync();
@@ -127,12 +127,12 @@ namespace RecipesApi.Tests.Integration_Tests
             var response = await client.PostAsJsonAsync(apiURL, ingredient);
 
             // Assert
-            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+            Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
         }
 
         // Test nieautoryzowanego dodawania składnika
         [Fact]
-        public async Task CreatIngredient_NoJWT_ShouldReturnUnauthorized()
+        public async Task CreateIngredient_NoJWT_ShouldReturnUnauthorized()
         {
             // Arrange
             var ingredient = GetCreateIngredientDTOAsync();
@@ -197,6 +197,32 @@ namespace RecipesApi.Tests.Integration_Tests
             // Sprawdź czy w bazie nie zmieniono nazwy składnika
             var ingredientInDb = await GetIngredientIfExists(updateIngredientDTO.Name);
             Assert.Null(ingredientInDb);
+        }
+
+        // Test aktualizacji składnika z zajętą nazwą
+        [Fact]
+        public async Task UpdateIngredient_NotUniqueName_ShouldReturnBadRequest()
+        {
+            // Arrange
+            var (client, _) = await GetAuthenticatedClientAsync();
+
+            // Dodaj składnik do bazy danych
+            var ingredient = await AddIngredientToDatabaseAsync();
+            var url = $"{apiURL}/{ingredient.Id}";
+            
+            var ingredient2 = await AddIngredientToDatabaseAsync("Test Ingredient 2");
+
+            var updateIngredientDTO = GetUpdateIngredientDTOAsync(ingredient2.Name);
+
+            // Act
+            var response = await client.PutAsJsonAsync(url, updateIngredientDTO);
+
+            // Assert
+            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+            // Sprawdź czy w bazie nie zmieniono nazwy składnika
+            var ingredientInDb = await GetIngredientIfExists(ingredient.Name);
+            Assert.NotNull(ingredientInDb);
         }
 
         // Test aktualizacji nieistniejącego składnika

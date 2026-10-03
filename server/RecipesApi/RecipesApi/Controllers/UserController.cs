@@ -1,7 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using RecipesApi.DTOs.Auth;
 using RecipesApi.DTOs.Recipe;
 using RecipesApi.DTOs.User;
 using RecipesApi.Entities;
@@ -66,7 +65,7 @@ namespace RecipesApi.Controllers
 
             if (userExists)
             {
-                return BadRequest("Użytkownik o podanej nazwie lub emailu już istnieje.");
+                return Conflict("Użytkownik o podanej nazwie lub emailu już istnieje.");
             }
 
             var user = new User
@@ -102,6 +101,12 @@ namespace RecipesApi.Controllers
             if (user == null)
             {
                 return NotFound();
+            }
+
+            var userExists = await _context.Users.AnyAsync(u => u.Username.ToLower() == updateUserDTO.Username.ToLower() || u.Email.ToLower() == updateUserDTO.Email.ToLower());
+            if (userExists)
+            {
+                return Conflict("Użytkownik o podanej nazwie lub emailu już istnieje.");
             }
 
             user.Username = updateUserDTO.Username;

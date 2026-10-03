@@ -9,8 +9,10 @@ using System.Text;
 
 namespace RecipesApi.Tests.Integration_Tests
 {
-    public class RecipeControllerTests : BaseIntegrationTests, IClassFixture<CustomWebApplicationFactory<Program>>
+    public class RecipeControllerTests : BaseIntegrationTests, IClassFixture<CustomWebApplicationFactory<Program>>, IAsyncLifetime
     {
+        private string apiURL = "/api/Recipe";
+
         public RecipeControllerTests(CustomWebApplicationFactory<Program> factory) : base(factory) { }
 
         // ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- -----
@@ -180,8 +182,6 @@ namespace RecipesApi.Tests.Integration_Tests
         public async Task GetRecipes_ShouldReturnOk()
         {
             // Arrange
-            await ResetDatabaseAsync();
-            var apiURL = "/api/Recipe";
             var (client, userId) = await GetAuthenticatedClientAsync();
 
             // Dodaj przykładowe przepisy
@@ -205,7 +205,6 @@ namespace RecipesApi.Tests.Integration_Tests
         public async Task GetRecipes_WithQuery_ShouldReturnFilteredResults()
         {
             // Arrange
-            await ResetDatabaseAsync();
 
             // Dodaj przykładowe przepisy
             await AddRecipeToDatabaseAsync(title: "Kotlet Schabowy");
@@ -219,10 +218,10 @@ namespace RecipesApi.Tests.Integration_Tests
             };
 
             var queryString = ToQueryString(queryDTO);
-            var apiURL = $"/api/Recipe?{queryString}";
+            var url = $"{apiURL}?{queryString}";
 
             // Act
-            var response = await _unauthorizedClient.GetAsync(apiURL);
+            var response = await _unauthorizedClient.GetAsync(url);
 
             // Assert
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -239,13 +238,12 @@ namespace RecipesApi.Tests.Integration_Tests
         public async Task GetRecipe_ExistingRecipe_ShouldReturnOK()
         {
             // Arrange
-            await ResetDatabaseAsync();
             var recipe = await AddRecipeToDatabaseAsync();
-            var apiURL = $"/api/Recipe/{recipe.Id}";
+            var url = $"{apiURL}/{recipe.Id}";
             var (client, userId) = await GetAuthenticatedClientAsync();
 
             // Act
-            var response = await client.GetAsync(apiURL);
+            var response = await client.GetAsync(url);
 
             // Assert
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -256,12 +254,11 @@ namespace RecipesApi.Tests.Integration_Tests
         public async Task GetRecipe_NonexistentRecipe_ShouldReturnNotFound()
         {
             // Arrange
-            await ResetDatabaseAsync();
-            var apiURL = "/api/Recipe/999";
+            var url = $"{apiURL}/999";
             var (client, userId) = await GetAuthenticatedClientAsync();
 
             // Act
-            var response = await client.GetAsync(apiURL);
+            var response = await client.GetAsync(url);
 
             // Assert
             Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
@@ -273,9 +270,7 @@ namespace RecipesApi.Tests.Integration_Tests
         [Fact]
         public async Task CreateRecipe_ValidData_ShouldReturnCreated()
         {
-            // Arrange
-            await ResetDatabaseAsync();
-            var apiURL = "/api/Recipe";
+            // Arrange           
             var (client, userId) = await GetAuthenticatedClientAsync();
 
             var ingredient = await AddIngredientToDatabaseAsync();
@@ -310,8 +305,6 @@ namespace RecipesApi.Tests.Integration_Tests
         public async Task CreateRecipe_InvalidData_ShouldReturnBadRequest(string title, string description, int calories)
         {
             // Arrange
-            await ResetDatabaseAsync();
-            var apiURL = "/api/Recipe";
             var (client, userId) = await GetAuthenticatedClientAsync();
 
             var ingredient = await AddIngredientToDatabaseAsync();
@@ -335,9 +328,7 @@ namespace RecipesApi.Tests.Integration_Tests
         [Fact]
         public async Task CreateRecipe_InvalidDifficultyLevel_ShouldReturnBadRequest()
         {
-            // Arrange
-            await ResetDatabaseAsync();
-            var apiURL = "/api/Recipe";
+            // Arrange            
             var (client, userId) = await GetAuthenticatedClientAsync();
 
             var ingredient = await AddIngredientToDatabaseAsync();
@@ -361,8 +352,6 @@ namespace RecipesApi.Tests.Integration_Tests
         public async Task CreateRecipe_NoRecipeIngredients_ShouldReturnBadRequest()
         {
             // Arrange
-            await ResetDatabaseAsync();
-            var apiURL = "/api/Recipe";
             var (client, userId) = await GetAuthenticatedClientAsync();
 
             var ingredient = await AddIngredientToDatabaseAsync();
@@ -384,8 +373,6 @@ namespace RecipesApi.Tests.Integration_Tests
         public async Task CreateRecipe_NoSteps_ShouldReturnBadRequest()
         {
             // Arrange
-            await ResetDatabaseAsync();
-            var apiURL = "/api/Recipe";
             var (client, userId) = await GetAuthenticatedClientAsync();
 
             var ingredient = await AddIngredientToDatabaseAsync();
@@ -407,8 +394,6 @@ namespace RecipesApi.Tests.Integration_Tests
         public async Task CreateRecipe_InvalidImageFormat_ShouldReturnBadRequest()
         {
             // Arrange
-            await ResetDatabaseAsync();
-            var apiURL = "/api/Recipe";
             var (client, userId) = await GetAuthenticatedClientAsync();
 
             var ingredient = await AddIngredientToDatabaseAsync();
@@ -430,9 +415,6 @@ namespace RecipesApi.Tests.Integration_Tests
         public async Task CreateRecipe_NoJWT_ShouldReturnUnauthorized()
         {
             // Arrange
-            await ResetDatabaseAsync();
-            var apiURL = "/api/Recipe";
-
             var createRecipeDTO = new CreateRecipeDTO
             {
                 Title = "Test Recipe"
@@ -454,10 +436,10 @@ namespace RecipesApi.Tests.Integration_Tests
         public async Task UpdateRecipe_ValidData_ShouldReturnOK()
         {
             // Arrange
-            await ResetDatabaseAsync();
+            
             var (client, userId) = await GetAuthenticatedClientAsync();
             var recipe = await AddRecipeToDatabaseAsync(userId: userId);
-            var apiURL = $"/api/Recipe/{recipe.Id}";
+            var url = $"{apiURL}/{recipe.Id}";
 
             // Dodaj składnik wymagany do walidacji
             var ingredient = await AddIngredientToDatabaseAsync();
@@ -468,7 +450,7 @@ namespace RecipesApi.Tests.Integration_Tests
             var httpContent = GetRecipeMultipartContent(updateRecipeDTO);
 
             // Act
-            var response = await client.PutAsync(apiURL, httpContent);
+            var response = await client.PutAsync(url, httpContent);
 
             // Assert
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -488,11 +470,11 @@ namespace RecipesApi.Tests.Integration_Tests
         public async Task UpdateRecipe_InvalidData_ShouldReturnBadRequest(string title, string description, int calories)
         {
             // Arrange
-            await ResetDatabaseAsync();
+            
             var (client, userId) = await GetAuthenticatedClientAsync();
 
             var recipe = await AddRecipeToDatabaseAsync(userId);
-            var apiURL = $"/api/Recipe/{recipe.Id}";
+            var url = $"{apiURL}/{recipe.Id}";
 
             // Dodaj składnik wymagany do walidacji
             var ingredient = await AddIngredientToDatabaseAsync();
@@ -503,7 +485,7 @@ namespace RecipesApi.Tests.Integration_Tests
             var httpContent = GetRecipeMultipartContent(updateRecipeDTO);
 
             // Act
-            var response = await client.PutAsync(apiURL, httpContent);
+            var response = await client.PutAsync(url, httpContent);
 
             // Assert
             Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
@@ -514,8 +496,8 @@ namespace RecipesApi.Tests.Integration_Tests
         public async Task UpdateRecipe_NonexistentRecipe_ShouldReturnNotFound()
         {
             // Arrange
-            await ResetDatabaseAsync();
-            var apiURL = "/api/Recipe/999";
+            
+            var url = $"{apiURL}/999";
             var (client, userId) = await GetAuthenticatedClientAsync();
 
             // Przygotuj zaktualizowane dane przepisu
@@ -524,7 +506,7 @@ namespace RecipesApi.Tests.Integration_Tests
             var httpContent = GetRecipeMultipartContent(updateRecipeDTO);
 
             // Act
-            var response = await client.PutAsync(apiURL, httpContent);
+            var response = await client.PutAsync(url, httpContent);
 
             // Assert
             Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
@@ -532,17 +514,17 @@ namespace RecipesApi.Tests.Integration_Tests
 
         // Test aktualizacji nieswojego przepisu
         [Fact]
-        public async Task UpdateRecipe_NotOwnedRecipe_ShouldReturnForbid()
+        public async Task UpdateRecipe_NotOwn_ShouldReturnForbid()
         {
             // Arrange
-            await ResetDatabaseAsync();
+            
             var (client, userId) = await GetAuthenticatedClientAsync();
 
             // Dodaj innego użytkownika
             var otherUser = await AddUserToDatabaseAsync();
 
             var recipe = await AddRecipeToDatabaseAsync(userId: otherUser.Id);
-            var apiURL = $"/api/Recipe/{recipe.Id}";
+            var url = $"{apiURL}/{recipe.Id}";
 
             // Dodaj składnik wymagany do walidacji
             var ingredient = await AddIngredientToDatabaseAsync();
@@ -553,7 +535,7 @@ namespace RecipesApi.Tests.Integration_Tests
             var httpContent = GetRecipeMultipartContent(updateRecipeDTO);
 
             // Act
-            var response = await client.PutAsync(apiURL, httpContent);
+            var response = await client.PutAsync(url, httpContent);
 
             // Assert
             Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
@@ -568,15 +550,15 @@ namespace RecipesApi.Tests.Integration_Tests
         public async Task UpdateRecipe_NoJWT_ShouldReturnUnauthorized()
         {
             // Arrange
-            await ResetDatabaseAsync();
-            var apiURL = "/api/Recipe/1";
+            
+            var url = $"{apiURL}/1";
 
             var updateRecipeDTO = await GetUpdateRecipeDTOAsync();
 
             var httpContent = GetRecipeMultipartContent(updateRecipeDTO);
 
             // Act
-            var response = await _unauthorizedClient.PutAsync(apiURL, httpContent);
+            var response = await _unauthorizedClient.PutAsync(url, httpContent);
 
             // Assert
             Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
@@ -589,15 +571,15 @@ namespace RecipesApi.Tests.Integration_Tests
         public async Task DeleteRecipe_ShouldReturnNoContent()
         {
             // Arrange
-            await ResetDatabaseAsync();
+            
             var (client, userId) = await GetAuthenticatedClientAsync();
 
             // Dodaj przepis do bazy danych
             var recipe = await AddRecipeToDatabaseAsync(userId: userId);
-            var apiURL = $"/api/Recipe/{recipe.Id}";
+            var url = $"{apiURL}/{recipe.Id}";
 
             // Act
-            var response = await client.DeleteAsync(apiURL);
+            var response = await client.DeleteAsync(url);
 
             // Assert
             Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
@@ -612,12 +594,12 @@ namespace RecipesApi.Tests.Integration_Tests
         public async Task DeleteRecipe_NonexistentRecipe_ShouldReturnNotFound()
         {
             // Arrange
-            await ResetDatabaseAsync();
+            
             var (client, userId) = await GetAuthenticatedClientAsync();
-            var apiURL = $"/api/Recipe/1";
+            var url = $"{apiURL}/1";
 
             // Act
-            var response = await client.DeleteAsync(apiURL);
+            var response = await client.DeleteAsync(url);
 
             // Assert
             Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
@@ -625,10 +607,10 @@ namespace RecipesApi.Tests.Integration_Tests
 
         // Test usunięcia nieswojego przepisu
         [Fact]
-        public async Task DeleteRecipe_NotOwnedRecipe_ShouldReturnForbid()
+        public async Task DeleteRecipe_NotOwn_ShouldReturnForbid()
         {
             // Arrange
-            await ResetDatabaseAsync();
+            
             var (client, userId) = await GetAuthenticatedClientAsync();
 
             // Dodaj innego użytkownika
@@ -636,10 +618,10 @@ namespace RecipesApi.Tests.Integration_Tests
 
             // Dodaj przepis do bazy danych
             var recipe = await AddRecipeToDatabaseAsync(userId: otherUser.Id);
-            var apiURL = $"/api/Recipe/{recipe.Id}";
+            var url = $"{apiURL}/{recipe.Id}";
 
             // Act
-            var response = await client.DeleteAsync(apiURL);
+            var response = await client.DeleteAsync(url);
 
             // Assert
             Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
@@ -654,15 +636,15 @@ namespace RecipesApi.Tests.Integration_Tests
         public async Task DeleteRecipe_NoJWT_ShouldReturnUnauthorized()
         {
             // Arrange
-            await ResetDatabaseAsync();
+            
             var (client, userId) = await GetAuthenticatedClientAsync();
 
             // Dodaj przepis do bazy danych
             var recipe = await AddRecipeToDatabaseAsync(userId: userId);
-            var apiURL = $"/api/Recipe/{recipe.Id}";
+            var url = $"{apiURL}/{recipe.Id}";
 
             // Act
-            var response = await _unauthorizedClient.DeleteAsync(apiURL);
+            var response = await _unauthorizedClient.DeleteAsync(url);
 
             // Assert
             Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
@@ -671,5 +653,14 @@ namespace RecipesApi.Tests.Integration_Tests
             var recipeInDb = await GetRecipeIfExistsAsync(recipe.Title);
             Assert.NotNull(recipeInDb);
         }
+
+        // ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- -----
+
+        public async Task InitializeAsync()
+        {
+            await ResetDatabaseAsync();
+        }
+
+        public Task DisposeAsync() => Task.CompletedTask;
     }
 }

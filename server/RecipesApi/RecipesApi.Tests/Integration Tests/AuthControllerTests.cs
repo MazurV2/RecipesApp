@@ -4,7 +4,7 @@ using System.Net.Http.Json;
 
 namespace RecipesApi.Tests.Integration_Tests
 {
-    public class AuthControllerTests : BaseIntegrationTests, IClassFixture<CustomWebApplicationFactory<Program>>
+    public class AuthControllerTests : BaseIntegrationTests, IClassFixture<CustomWebApplicationFactory<Program>>, IAsyncLifetime
     {
         public AuthControllerTests(CustomWebApplicationFactory<Program> factory) : base(factory) { }
 
@@ -17,7 +17,7 @@ namespace RecipesApi.Tests.Integration_Tests
             // Arrange
             var registerDTO = new RegisterDTO
             {
-                Username = "test",
+                Username = "Test",
                 Email = "test@example.com",
                 Password = "TestPassword123!",
                 PasswordConfirmation = "TestPassword123!"
@@ -39,9 +39,9 @@ namespace RecipesApi.Tests.Integration_Tests
         // Test rejestracji z błędnymi danymi
         [Theory]
         [InlineData("", "test@example.com", "TestPassword123!", "TestPassword123!")] // Błędna nazwa
-        [InlineData("test", "invalid-email", "TestPassword123!", "TestPassword123!")] // Błędny email
-        [InlineData("test", "test@example.com", "invalid-password", "invalid-password")] // Błędne hasło
-        [InlineData("test", "test@example.com", "TestPassword123!", "invalid-passwordConfirmation")] // Błędne potwierdzenie hasła
+        [InlineData("Test", "invalid-email", "TestPassword123!", "TestPassword123!")] // Błędny email
+        [InlineData("Test", "test@example.com", "invalid-password", "invalid-password")] // Błędne hasło
+        [InlineData("Test", "test@example.com", "TestPassword123!", "invalid-passwordConfirmation")] // Błędne potwierdzenie hasła
         public async Task Register_InvalidData_ShouldReturnBadRequest(string username, string email, string password, string passwordConfirmation)
         {
             // Arrange
@@ -130,5 +130,14 @@ namespace RecipesApi.Tests.Integration_Tests
             // Assert
             Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
         }
+
+        // ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- -----
+
+        public async Task InitializeAsync()
+        {
+            await ResetDatabaseAsync();
+        }
+
+        public Task DisposeAsync() => Task.CompletedTask;
     }
 }

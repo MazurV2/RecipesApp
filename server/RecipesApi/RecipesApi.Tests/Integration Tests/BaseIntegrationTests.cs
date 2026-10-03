@@ -94,10 +94,19 @@ namespace RecipesApi.Tests.Integration_Tests
             return user;
         }
 
+        protected async Task<User?> GetUserIfExistsAsync(int id)
+        {
+            using var scope = _factory.Services.CreateScope();
+            var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+            var user = await dbContext.Users.Where(u => u.Id == id).FirstOrDefaultAsync();
+            return user;
+        }
+
         // ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- -----
 
         // Dodaj składnik do bazy danych
-        protected async Task<Ingredient> AddIngredientToDatabaseAsync(string name = "Test Ingredient")
+        protected async Task<Ingredient> AddIngredientToDatabaseAsync(string? name = null)
         {
             using var scope = _factory.Services.CreateScope();
             var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -107,7 +116,7 @@ namespace RecipesApi.Tests.Integration_Tests
 
             var ingredient = new Ingredient
             {
-                Name = $"{name}_{uniqueId}"
+                Name = name ?? $"Ingredient_{uniqueId}"
             };
 
             dbContext.Ingredients.Add(ingredient);

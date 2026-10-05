@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi;
 using RecipesApi;
 using RecipesApi.Filters;
+using RecipesApi.Middleware;
 using RecipesApi.Services;
 using RecipesApi.Services.Interfaces;
 using RecipesApi.Settings;
@@ -102,6 +103,8 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+app.UseMiddleware<ExceptionHandlingMiddleware>();
 
 app.UseAuthentication();
 

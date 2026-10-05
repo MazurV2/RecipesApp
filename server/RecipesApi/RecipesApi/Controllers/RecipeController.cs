@@ -32,46 +32,8 @@ namespace RecipesApi.Controllers
             // Stwórz bazowe zapytanie do bazy danych
             var query = _context.Recipes.AsQueryable();
 
-            // Filtruj po szukanej frazie
-            if (!string.IsNullOrWhiteSpace(queryDTO.SearchTerm))
-            {
-                var searchTerm = queryDTO.SearchTerm.ToLower();
-                query = query.Where(r => 
-                    r.Title.ToLower().Contains(searchTerm) || 
-                    r.Description.ToLower().Contains(searchTerm)
-                );
-            }
-
-            // Filtruj po kaloriach
-            if (queryDTO.MinCalories.HasValue)
-            {
-                query = query.Where(r => r.Calories >= queryDTO.MinCalories.Value);
-            }
-            
-            if (queryDTO.MaxCalories.HasValue)
-            {
-                query = query.Where(r => r.Calories <= queryDTO.MaxCalories.Value);
-            }
-
-            // Filtruj po poziomie trudności
-            if (queryDTO.MinDifficulty.HasValue)
-            {
-                query = query.Where(r => (int)r.Difficulty >= queryDTO.MinDifficulty.Value);
-            }
-
-            if (queryDTO.MaxDifficulty.HasValue)
-            {
-                query = query.Where(r => (int)r.Difficulty <= queryDTO.MaxDifficulty.Value);
-            }
-
-            // Sortuj po wybranym polu i kierunku
-            query = queryDTO.SortBy?.ToLower() switch
-            {
-                "title" => queryDTO.SortDescending ? query.OrderByDescending(r => r.Title) : query.OrderBy(r => r.Title),
-                "calories" => queryDTO.SortDescending ? query.OrderByDescending(r => r.Calories) : query.OrderBy(r => r.Calories),
-                "difficulty" => queryDTO.SortDescending ? query.OrderByDescending(r => r.Difficulty) : query.OrderBy(r => r.Difficulty),
-                _ => queryDTO.SortDescending ? query.OrderByDescending(r => r.Id) : query.OrderBy(r => r.Id),
-            };
+            query = ApplyFilters(query, queryDTO);
+            query = ApplySorting(query, queryDTO);
 
             // Pobierz całkowitą liczbę przepisów po zastosowaniu filtrów
             var totalCount = await query.CountAsync();
@@ -267,6 +229,16 @@ namespace RecipesApi.Controllers
             return NoContent();
         }
 
+#if DEBUG
+        [HttpGet("test-error")]
+        public IActionResult TestError()
+        {
+            throw new InvalidOperationException("To jest błąd testowy.");
+        }
+#endif
+
+        // ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- -----
+
         private Task<RecipeDTO?> GetRecipeDtoById(int id)
         {
             return _context.Recipes
@@ -329,6 +301,52 @@ namespace RecipesApi.Controllers
             }
 
             return null;
+        }
+
+        private IQueryable<Recipe> ApplyFilters(IQueryable<Recipe> query, RecipeQueryDTO queryDTO)
+        {
+            // Filtruj po szukanej frazie
+            if (!string.IsNullOrWhiteSpace(queryDTO.SearchTerm))
+            {
+                var searchTerm = queryDTO.SearchTerm.ToLower();
+                query = query.Where(r =>
+                    r.Title.ToLower().Contains(searchTerm) ||
+                    r.Description.ToLower().Contains(searchTerm)
+                );
+            }
+            // Filtruj po kaloriach
+            if (queryDTO.MinCalories.HasValue)
+            {
+                query = query.Where(r => r.Calories >= queryDTO.MinCalories.Value);
+            }
+
+            if (queryDTO.MaxCalories.HasValue)
+            {
+                query = query.Where(r => r.Calories <= queryDTO.MaxCalories.Value);
+            }
+            // Filtruj po poziomie trudności
+            if (queryDTO.MinDifficulty.HasValue)
+            {
+                query = query.Where(r => (int)r.Difficulty >= queryDTO.MinDifficulty.Value);
+            }
+            if (queryDTO.MaxDifficulty.HasValue)
+            {
+                query = query.Where(r => (int)r.Difficulty <= queryDTO.MaxDifficulty.Value);
+            }
+            return query;
+        }
+
+        private IQueryable<Recipe> ApplySorting(IQueryable<Recipe> query, RecipeQueryDTO queryDTO)
+        {
+            // Sortuj po wybranym polu i kierunku
+            query = queryDTO.SortBy?.ToLower() switch
+            {
+                "title" => queryDTO.SortDescending ? query.OrderByDescending(r => r.Title) : query.OrderBy(r => r.Title),
+                "calories" => queryDTO.SortDescending ? query.OrderByDescending(r => r.Calories) : query.OrderBy(r => r.Calories),
+                "difficulty" => queryDTO.SortDescending ? query.OrderByDescending(r => r.Difficulty) : query.OrderBy(r => r.Difficulty),
+                _ => queryDTO.SortDescending ? query.OrderByDescending(r => r.Id) : query.OrderBy(r => r.Id),
+            };
+            return query;
         }
     }
 }

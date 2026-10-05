@@ -25,4 +25,8 @@
     <ProjectReference Include="..\RecipesApi\RecipesApi.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="TestResults\" />
+  </ItemGroup>
+
 </Project>

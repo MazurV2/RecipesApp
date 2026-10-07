@@ -229,14 +229,6 @@ namespace RecipesApi.Controllers
             return NoContent();
         }
 
-#if DEBUG
-        [HttpGet("test-error")]
-        public IActionResult TestError()
-        {
-            throw new InvalidOperationException("To jest błąd testowy.");
-        }
-#endif
-
         // ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- -----
 
         private Task<RecipeDTO?> GetRecipeDtoById(int id)

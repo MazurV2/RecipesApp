@@ -1,7 +1,4 @@
-﻿
-
-using RecipesApi.DTOs.User;
-using RecipesApi.Entities;
+﻿using RecipesApi.DTOs.User;
 using System.Net;
 using System.Net.Http.Json;
 

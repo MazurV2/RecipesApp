@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using System.Text.Json;
 
 namespace RecipesApi.Middleware
 {
@@ -47,10 +48,13 @@ namespace RecipesApi.Middleware
                     StatusCodes.Status404NotFound => "Not Found",
                     _ => "Internal Server Error"
                 },
-                Detail = ex.Message
+                Detail = statusCode == StatusCodes.Status500InternalServerError 
+                    ? "An unexpected error has occurred."
+                    : ex.Message
             };
-
-            await context.Response.WriteAsJsonAsync(problemDetails);
+            
+            var json = JsonSerializer.Serialize(problemDetails);
+            await context.Response.WriteAsync(json);
         }
     }
 }

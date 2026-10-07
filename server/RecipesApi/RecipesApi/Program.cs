@@ -12,14 +12,17 @@ using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
-var corsPolicy = "CorsPolicy";
+var corsSettings = builder.Configuration
+    .GetSection("CorsSettings");
+var allowedOrigins = corsSettings.GetSection("AllowedOrigins")
+    .Get<string[]>() ?? Array.Empty<string>();
 
 // Dodaj obsługę CORS
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy(name: corsPolicy, policy =>
+    options.AddPolicy(name: corsSettings.Key, policy =>
     {
-        policy.WithOrigins("http://localhost:3000")
+        policy.WithOrigins(allowedOrigins)
               .AllowAnyMethod()
               .AllowAnyHeader()
               .AllowCredentials();
@@ -120,7 +123,7 @@ app.UseHttpsRedirection();
 
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 
-app.UseCors(corsPolicy);
+app.UseCors(corsSettings.Key);
 app.UseAuthentication();
 
 app.UseAuthorization();

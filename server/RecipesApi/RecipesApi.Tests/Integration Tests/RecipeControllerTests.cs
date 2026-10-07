@@ -191,7 +191,7 @@ namespace RecipesApi.Tests.Integration_Tests
 
             // Act
             var response = await client.GetAsync(apiURL);
-            
+
             // Assert
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 

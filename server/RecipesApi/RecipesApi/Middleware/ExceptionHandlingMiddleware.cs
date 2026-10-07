@@ -31,26 +31,30 @@ namespace RecipesApi.Middleware
         {
             var statusCode = ex switch
             {
-                UnauthorizedAccessException => StatusCodes.Status401Unauthorized,
+                UnauthorizedAccessException => StatusCodes.Status403Forbidden,
                 KeyNotFoundException => StatusCodes.Status404NotFound,
+                ArgumentException => StatusCodes.Status400BadRequest,
+                BadHttpRequestException => StatusCodes.Status400BadRequest,
                 _ => StatusCodes.Status500InternalServerError
             };
 
             context.Response.ContentType = "application/problem+json";
             context.Response.StatusCode = statusCode;
-            
+
             var problemDetails = new ProblemDetails
             {
                 Status = statusCode,
                 Title = statusCode switch
                 {
-                    StatusCodes.Status401Unauthorized => "Unauthorized",
+                    StatusCodes.Status403Forbidden => "Forbidden",
                     StatusCodes.Status404NotFound => "Not Found",
+                    StatusCodes.Status400BadRequest => "Bad Request",
                     _ => "Internal Server Error"
                 },
-                Detail = statusCode == StatusCodes.Status500InternalServerError 
-                    ? "An unexpected error has occurred."
-                    : ex.Message
+                //Detail = statusCode == StatusCodes.Status500InternalServerError
+                //    ? "An unexpected error has occurred."
+                //    : ex.Message
+                Detail = ex.Message
             };
             
             var json = JsonSerializer.Serialize(problemDetails);

@@ -11,7 +11,12 @@ namespace RecipesApi.Validators.Recipe
             Include(new BaseRecipeDTOValidator<UpdateRecipeDTO>());
 
             RuleFor(x => x.RecipeIngredients)
-                .NotEmpty().WithMessage("Przepis musi zawierać co najmniej jeden składnik.");
+                .NotEmpty().WithMessage("Przepis musi zawierać co najmniej jeden składnik.")
+                .Must(recipeIngredients => recipeIngredients
+                    .Select(ri => ri.IngredientId)
+                    .Distinct()
+                    .Count() == recipeIngredients.Count())
+                .WithMessage("Przepis nie może zawierać zduplikowanych składników.");
 
             RuleFor(x => x.Steps)
                 .NotEmpty().WithMessage("Przepis musi zawierać co najmniej jeden krok.");

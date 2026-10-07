@@ -18,7 +18,7 @@ namespace RecipesApi.Tests.Unit_Tests
         {
             // Arrange
             // Stwórz instancję middleware z symulowanym wyjątkiem
-            RequestDelegate next = _ => throw new Exception("To jest błąd testowy.");
+            RequestDelegate next = _ => throw new Exception("An unexpected error has occurred.");
             var middleware = new ExceptionHandlingMiddleware(next, _loggerMock.Object);
 
             // Stwórz żądanie HTTP i ustaw zapis odpowiedzi na strumień pamięci
@@ -41,7 +41,7 @@ namespace RecipesApi.Tests.Unit_Tests
 
             Assert.NotNull(problemDetails);
             Assert.Equal(StatusCodes.Status500InternalServerError, problemDetails.Status);
-            Assert.Equal("To jest błąd testowy.", problemDetails.Detail);
+            Assert.Equal("An unexpected error has occurred.", problemDetails.Detail);
         }
     }
 }

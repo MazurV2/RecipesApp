@@ -5,7 +5,7 @@ using RecipesApi.Services;
 using RecipesApi.Services.Interfaces;
 using RecipesApi.Settings;
 
-namespace RecipesApi.Tests
+namespace RecipesApi.Tests.Unit_Tests
 {
     public class AuthServiceTests : IDisposable
     {

@@ -5,7 +5,7 @@ using RecipesApi.Settings;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 
-namespace RecipesApi.Tests
+namespace RecipesApi.Tests.Unit_Tests
 {
     public class TokenServiceTests
     {

@@ -5,7 +5,7 @@ using NSubstitute;
 using RecipesApi.Services;
 using System.Text;
 
-namespace RecipesApi.Tests
+namespace RecipesApi.Tests.Unit_Tests
 {
     public class FileServiceTests : IDisposable
     {

@@ -10,7 +10,7 @@ using FluentValidation;
 using NSubstitute;
 
 
-namespace RecipesApi.Tests
+namespace RecipesApi.Tests.Unit_Tests
 {
     public class ValidationFilterTests
     {

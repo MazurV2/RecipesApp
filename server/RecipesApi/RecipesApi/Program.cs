@@ -40,6 +40,8 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IFileService, FileService>();
 
+builder.Services.AddScoped<IRecipeService, RecipeService>();
+
 // Przekaż ustawienia JWT
 builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("JwtSettings"));
 
@@ -124,6 +126,9 @@ app.UseHttpsRedirection();
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 
 app.UseCors(corsSettings.Key);
+
+//app.UseStaticFiles();
+
 app.UseAuthentication();
 
 app.UseAuthorization();

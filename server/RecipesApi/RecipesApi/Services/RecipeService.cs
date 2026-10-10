@@ -5,7 +5,6 @@ using RecipesApi.DTOs.Step;
 using RecipesApi.Entities;
 using RecipesApi.Pagination;
 using RecipesApi.Services.Interfaces;
-using System.Security.Claims;
 
 namespace RecipesApi.Services
 {

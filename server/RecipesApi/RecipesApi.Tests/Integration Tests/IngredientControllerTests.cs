@@ -201,7 +201,7 @@ namespace RecipesApi.Tests.Integration_Tests
 
         // Test aktualizacji składnika z zajętą nazwą
         [Fact]
-        public async Task UpdateIngredient_NotUniqueName_ShouldReturnBadRequest()
+        public async Task UpdateIngredient_NotUniqueName_ShouldReturnConflict()
         {
             // Arrange
             var (client, _) = await GetAuthenticatedClientAsync();
@@ -218,7 +218,7 @@ namespace RecipesApi.Tests.Integration_Tests
             var response = await client.PutAsJsonAsync(url, updateIngredientDTO);
 
             // Assert
-            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+            Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
 
             // Sprawdź czy w bazie nie zmieniono nazwy składnika
             var ingredientInDb = await GetIngredientIfExists(ingredient.Name);

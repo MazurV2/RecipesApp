@@ -3,13 +3,12 @@ using Microsoft.AspNetCore.Mvc;
 using RecipesApi.DTOs.Recipe;
 using RecipesApi.Pagination;
 using RecipesApi.Services.Interfaces;
-using System.Security.Claims;
 
 namespace RecipesApi.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    public class RecipeController : ControllerBase
+    public class RecipeController : BaseController
     {
         private readonly IRecipeService _recipeService;
 
@@ -72,20 +71,6 @@ namespace RecipesApi.Controllers
             await _recipeService.DeleteRecipeAsync(id, userId);
 
             return NoContent();
-        }
-
-        // ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- -----
-
-        private int GetUserIdFromClaims()
-        {
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
-            
-            if (userIdClaim == null)
-            {
-                throw new UnauthorizedAccessException("Użytkownik nie jest zalogowany");
-            }
-
-            return int.Parse(userIdClaim.Value);
         }
     }
 }

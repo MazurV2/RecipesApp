@@ -35,6 +35,7 @@ namespace RecipesApi.Middleware
                 KeyNotFoundException => StatusCodes.Status404NotFound,
                 ArgumentException => StatusCodes.Status400BadRequest,
                 BadHttpRequestException => StatusCodes.Status400BadRequest,
+                InvalidOperationException => StatusCodes.Status409Conflict,
                 _ => StatusCodes.Status500InternalServerError
             };
 
@@ -49,6 +50,7 @@ namespace RecipesApi.Middleware
                     StatusCodes.Status403Forbidden => "Forbidden",
                     StatusCodes.Status404NotFound => "Not Found",
                     StatusCodes.Status400BadRequest => "Bad Request",
+                    StatusCodes.Status409Conflict => "Conflict",
                     _ => "Internal Server Error"
                 },
                 //Detail = statusCode == StatusCodes.Status500InternalServerError

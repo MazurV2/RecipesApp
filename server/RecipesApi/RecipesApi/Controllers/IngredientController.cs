@@ -1,34 +1,26 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using RecipesApi.DTOs.Ingredient;
-using RecipesApi.Entities;
+using RecipesApi.Services.Interfaces;
 
 namespace RecipesApi.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    public class IngredientController : ControllerBase
+    public class IngredientController : BaseController
     {
-        private readonly AppDbContext _context;
+        private readonly IIngredientService _ingredientService;
 
-        public IngredientController(AppDbContext context)
+        public IngredientController(IIngredientService ingredientService)
         {
-            _context = context;
+            _ingredientService = ingredientService;
         }
 
         // GET: api/Ingredient
         [HttpGet]
         public async Task<ActionResult<IEnumerable<IngredientDTO>>> GetIngredients()
         {
-            // Pobierz wszystkie składniki, przekształć na DTO i zwróć ich listę
-            var ingredients = await _context.Ingredients
-                .Select(i => new IngredientDTO
-                {
-                    Id = i.Id,
-                    Name = i.Name
-                })
-                .ToListAsync();
+            var ingredients = await _ingredientService.GetIngredientsAsync();
 
             return Ok(ingredients);
         }
@@ -37,21 +29,9 @@ namespace RecipesApi.Controllers
         [HttpGet("{id}")]
         public async Task<ActionResult<IngredientDTO>> GetIngredient(int id)
         {
-            // Znajdź składnik o podanym ID
-            var ingredient = await _context.Ingredients.FindAsync(id);
-            if (ingredient == null)
-            {
-                return NotFound();
-            }
+            var ingredient = await _ingredientService.GetIngredientByIdAsync(id);
 
-            // Utwórz obiekt DTO do zwrócenia w odpowiedzi
-            var ingredientDTO = new IngredientDTO
-            {
-                Id = ingredient.Id,
-                Name = ingredient.Name
-            };
-
-            return Ok(ingredientDTO);
+            return Ok(ingredient);
         }
 
         // POST: api/Ingredient
@@ -59,30 +39,12 @@ namespace RecipesApi.Controllers
         [Authorize]
         public async Task<ActionResult<IngredientDTO>> CreateIngredient(CreateIngredientDTO createIngredientDTO)
         {
-            var ingredientExists = await _context.Ingredients.AnyAsync(i => i.Name.ToLower() == createIngredientDTO.Name.ToLower());
+            var userId = GetUserIdFromClaims();
 
-            if (ingredientExists)
-            {
-                return Conflict("Składnik o podanej nazwie już istnieje.");
-            }
-
-            // Utwórz nowy składnik na podstawie danych z DTO
-            var ingredient = new Ingredient
-            {
-                Name = createIngredientDTO.Name
-            };
-
-            // Dodaj nowy składnik do bazy danych
-            _context.Ingredients.Add(ingredient);
-            await _context.SaveChangesAsync();
-
-            // Utwórz obiekt DTO do zwrócenia w odpowiedzi
-            var ingredientDTO = await GetIngredientDtoById(ingredient.Id);
-
-            if (ingredientDTO == null) return NotFound();
+            var ingredientDTO = await _ingredientService.CreateIngredientAsync(createIngredientDTO, userId);
 
             // Zwróć odpowiedź z kodem 201 Created i lokalizacją nowo utworzonego zasobu
-            return CreatedAtAction(nameof(GetIngredient), new { id = ingredient.Id }, ingredientDTO);
+            return CreatedAtAction(nameof(GetIngredient), new { id = ingredientDTO.Id }, ingredientDTO);
         }
 
         // PUT: api/Ingredient/{id}
@@ -90,28 +52,9 @@ namespace RecipesApi.Controllers
         [Authorize]
         public async Task<ActionResult<IngredientDTO>> UpdateIngredient(int id, UpdateIngredientDTO updateIngredientDTO)
         {
-            // Znajdź składnik o podanym ID
-            var ingredient = await _context.Ingredients.FindAsync(id);
-            if (ingredient == null)
-            {
-                return NotFound();
-            }
+            var userId = GetUserIdFromClaims();
 
-            // Sprawdź, czy istnieje już składnik o podanej nazwie
-            var ingredientWithSameNameExists = await _context.Ingredients.AnyAsync(i => i.Id != id && i.Name.ToLower() == updateIngredientDTO.Name.ToLower());
-
-            if (ingredientWithSameNameExists)
-            {
-                return BadRequest("Składnik o podanej nazwie już istnieje.");
-            }
-
-            // Zaktualizuj i zapisz właściwości składnika
-            ingredient.Name = updateIngredientDTO.Name;
-            await _context.SaveChangesAsync();
-
-            var ingredientDTO = await GetIngredientDtoById(id);
-
-            if (ingredientDTO == null) return NotFound();
+            var ingredientDTO = await _ingredientService.UpdateIngredientAsync(id, updateIngredientDTO, userId);
 
             return Ok(ingredientDTO);
         }
@@ -121,36 +64,11 @@ namespace RecipesApi.Controllers
         [Authorize]
         public async Task<IActionResult> DeleteIngredient(int id)
         {
-            // Znajdź składnik o podanym ID
-            var ingredient = await _context.Ingredients.FindAsync(id);
-            if (ingredient == null)
-            {
-                return NotFound();
-            }
+            var userId = GetUserIdFromClaims();
 
-            // Sprawdź czy składnik nie jest powiązany z przepisem
-            var isReferenced = await _context.RecipeIngredients
-                .AnyAsync(ri => ri.IngredientId == id);
-            
-            if (isReferenced) return Conflict("Nie można usunąć składnika, ponieważ jest wykorzystywany");
+            await _ingredientService.DeleteIngredientAsync(id, userId);
 
-            // Usuń składnik
-            _context.Ingredients.Remove(ingredient);
-            await _context.SaveChangesAsync();
-            
             return NoContent();
-        }
-
-        private Task<IngredientDTO?> GetIngredientDtoById(int id)
-        {
-            return _context.Ingredients
-                .Where(i => i.Id == id)
-                .Select(i => new IngredientDTO
-                {
-                    Id = i.Id,
-                    Name = i.Name
-                })
-                .FirstOrDefaultAsync();
         }
     }
 }

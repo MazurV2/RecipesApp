@@ -20,18 +20,18 @@ namespace RecipesApi.Controllers
         [HttpGet]
         public async Task<ActionResult<IEnumerable<IngredientDTO>>> GetIngredients()
         {
-            var ingredients = await _ingredientService.GetIngredientsAsync();
+            var ingredientDTOs = await _ingredientService.GetIngredientsAsync();
 
-            return Ok(ingredients);
+            return Ok(ingredientDTOs);
         }
 
         // GET: api/Ingredient/{id}
         [HttpGet("{id}")]
         public async Task<ActionResult<IngredientDTO>> GetIngredient(int id)
         {
-            var ingredient = await _ingredientService.GetIngredientByIdAsync(id);
+            var ingredientDTO = await _ingredientService.GetIngredientByIdAsync(id);
 
-            return Ok(ingredient);
+            return Ok(ingredientDTO);
         }
 
         // POST: api/Ingredient

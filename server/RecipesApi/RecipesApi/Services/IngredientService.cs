@@ -34,15 +34,7 @@ namespace RecipesApi.Services
         
         public async Task<IngredientDTO> GetIngredientByIdAsync(int id)
         {
-            // Znajdź składnik o podanym ID
-            var ingredient = await GetIngredientDtoById(id);
-
-            if (ingredient == null)
-            {
-                throw new KeyNotFoundException($"Nie znaleziono składnika o ID {id}");
-            }
-
-            return ingredient;
+            return await GetIngredientDtoById(id);
         }
 
         // ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- -----
@@ -53,7 +45,7 @@ namespace RecipesApi.Services
 
             if (ingredientExists)
             {
-                throw new InvalidOperationException("Składnik o podanej nazwie już istnieje.");
+                throw new ConflictException("Składnik o podanej nazwie już istnieje.");
             }
 
             // Utwórz nowy składnik na podstawie danych z DTO
@@ -68,11 +60,6 @@ namespace RecipesApi.Services
 
             // Utwórz obiekt DTO do zwrócenia w odpowiedzi
             var ingredientDTO = await GetIngredientDtoById(ingredient.Id);
-
-            if (ingredientDTO == null)
-            {
-                throw new Exception("Nie udało się utworzyć składnika");
-            }
 
             return ingredientDTO;
         }
@@ -93,7 +80,7 @@ namespace RecipesApi.Services
 
             if (ingredientWithSameNameExists)
             {
-                throw new InvalidOperationException("Składnik o podanej nazwie już istnieje.");
+                throw new ConflictException("Składnik o podanej nazwie już istnieje.");
             }
 
             // Zaktualizuj i zapisz właściwości składnika
@@ -127,7 +114,7 @@ namespace RecipesApi.Services
 
             if (isReferenced)
             {
-                throw new InvalidOperationException("Nie można usunąć składnika, ponieważ jest wykorzystywany");
+                throw new ConflictException("Nie można usunąć składnika, ponieważ jest wykorzystywany");
             }
 
             // Usuń składnik
@@ -137,9 +124,9 @@ namespace RecipesApi.Services
 
         // ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- -----
 
-        private Task<IngredientDTO?> GetIngredientDtoById(int id)
+        private async Task<IngredientDTO> GetIngredientDtoById(int id)
         {
-            return _context.Ingredients
+            var ingredientDto = await _context.Ingredients
                 .Where(i => i.Id == id)
                 .Select(i => new IngredientDTO
                 {
@@ -147,6 +134,13 @@ namespace RecipesApi.Services
                     Name = i.Name
                 })
                 .FirstOrDefaultAsync();
+
+            if (ingredientDto == null)
+            {
+                throw new KeyNotFoundException($"Nie znaleziono składnika o ID {id}");
+            }
+
+            return ingredientDto;
         }
     }
 }

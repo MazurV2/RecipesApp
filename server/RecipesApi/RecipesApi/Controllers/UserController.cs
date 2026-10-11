@@ -4,19 +4,20 @@ using Microsoft.EntityFrameworkCore;
 using RecipesApi.DTOs.Recipe;
 using RecipesApi.DTOs.User;
 using RecipesApi.Entities;
+using RecipesApi.Services.Interfaces;
 using System.Security.Claims;
 
 namespace RecipesApi.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    public class UserController : ControllerBase
+    public class UserController : BaseController
     {
-        private readonly AppDbContext _context;
+        private readonly IUserService _userService;
 
-        public UserController(AppDbContext context)
+        public UserController(IUserService userService)
         {
-            _context = context;
+            _userService = userService;
         }
 
         // GET: api/User
@@ -24,21 +25,9 @@ namespace RecipesApi.Controllers
         [Authorize]
         public async Task<ActionResult<IEnumerable<UserDTO>>> GetUsers()
         {
-            var users = await _context.Users
-                .Select(u => new UserDTO
-                {
-                    Id = u.Id,
-                    Username = u.Username,
-                    Email = u.Email,
-                    Recipes = u.Recipes.Select(r => new RecipeDTO
-                    {
-                        Id = r.Id,
-                        Title = r.Title,
-                        Description = r.Description
-                    }).ToList()
-                }).ToListAsync();
+            var userDTOs = await _userService.GetUsersAsync(GetUserIdFromClaims());
 
-            return Ok(users);
+            return Ok(userDTOs);
         }
 
         // GET: api/User/{id}
@@ -46,14 +35,11 @@ namespace RecipesApi.Controllers
         [Authorize]
         public async Task<ActionResult<UserDTO>> GetUser(int id)
         {
-            var user = await GetUserDtoById(id);
+            var userId = GetUserIdFromClaims();
 
-            if (user == null)
-            {
-                return NotFound();
-            }
+            var userDTO = await _userService.GetUserByIdAsync(id, userId);
 
-            return Ok(user);
+            return Ok(userDTO);
         }
 
         // POST: api/User
@@ -61,28 +47,11 @@ namespace RecipesApi.Controllers
         [Authorize]
         public async Task<ActionResult<UserDTO>> CreateUser(CreateUserDTO createUserDTO)
         {
-            var userExists = await _context.Users.AnyAsync(u => u.Username.ToLower() == createUserDTO.Username.ToLower() || u.Email.ToLower() == createUserDTO.Email.ToLower());
+            var userId = GetUserIdFromClaims();
 
-            if (userExists)
-            {
-                return Conflict("Użytkownik o podanej nazwie lub emailu już istnieje.");
-            }
+            var userDTO = await _userService.CreateUserAsync(createUserDTO, userId);
 
-            var user = new User
-            {
-                Username = createUserDTO.Username,
-                Email = createUserDTO.Email,
-                PasswordHash = BCrypt.Net.BCrypt.HashPassword(createUserDTO.Password)
-            };
-
-            _context.Users.Add(user);
-            await _context.SaveChangesAsync();
-
-            var userDTO = await GetUserDtoById(user.Id);
-
-            if (userDTO == null) return NotFound();
-
-            return CreatedAtAction(nameof(GetUser), new { id = user.Id }, userDTO);
+            return CreatedAtAction(nameof(GetUser), new { id = userDTO.Id }, userDTO);
         }
 
         // PUT: api/User/{id}
@@ -90,34 +59,7 @@ namespace RecipesApi.Controllers
         [Authorize]
         public async Task<ActionResult<UserDTO>> UpdateUser(int id, UpdateUserDTO updateUserDTO)
         {
-            // Pobierz id użytkownika z tokena
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-
-            if (userId == null) return Unauthorized();
-            if (int.Parse(userId) != id) return Forbid();
-
-            var user = await _context.Users.FindAsync(id);
-
-            if (user == null)
-            {
-                return NotFound();
-            }
-
-            var userExists = await _context.Users.AnyAsync(u => u.Username.ToLower() == updateUserDTO.Username.ToLower() || u.Email.ToLower() == updateUserDTO.Email.ToLower());
-            if (userExists)
-            {
-                return Conflict("Użytkownik o podanej nazwie lub emailu już istnieje.");
-            }
-
-            user.Username = updateUserDTO.Username;
-            user.Email = updateUserDTO.Email;
-            user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(updateUserDTO.Password);
-
-            await _context.SaveChangesAsync();
-
-            var userDTO = await GetUserDtoById(user.Id);
-
-            if (userDTO == null) return NotFound();
+            var userDTO = await _userService.UpdateUserAsync(id, updateUserDTO, GetUserIdFromClaims());
 
             return Ok(userDTO);
         }
@@ -127,43 +69,9 @@ namespace RecipesApi.Controllers
         [Authorize]
         public async Task<IActionResult> DeleteUser(int id)
         {
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-
-            if (userId == null) return Unauthorized();
-            if (int.Parse(userId) != id) return Forbid();
-
-            var user = await _context.Users
-                .FirstOrDefaultAsync(u => u.Id == id);
-
-            if (user == null)
-            {
-                return NotFound();
-            }
-
-            // Usuń użytkownika
-            _context.Users.Remove(user);
-            await _context.SaveChangesAsync();
+            await _userService.DeleteUserAsync(id, GetUserIdFromClaims());
 
             return NoContent();
-        }
-
-        private Task<UserDTO?> GetUserDtoById(int id)
-        {
-            return _context.Users
-                .Where(u => u.Id == id)
-                .Select(u => new UserDTO
-                {
-                    Id = u.Id,
-                    Username = u.Username,
-                    Email = u.Email,
-                    Recipes = u.Recipes.Select(r => new RecipeDTO
-                    {
-                        Id = r.Id,
-                        Title = r.Title,
-                        Description = r.Description
-                    }).ToList()
-                })
-                .FirstOrDefaultAsync();
         }
     }
 }

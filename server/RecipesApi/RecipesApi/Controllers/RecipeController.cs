@@ -21,18 +21,18 @@ namespace RecipesApi.Controllers
         [HttpGet]
         public async Task<ActionResult<PagedResults<RecipeDTO>>> GetRecipes([FromQuery] RecipeQueryDTO queryDTO)
         {
-            var results = await _recipeService.GetRecipesAsync(queryDTO);
+            var recipeDTOs = await _recipeService.GetRecipesAsync(queryDTO);
 
-            return Ok(results);
+            return Ok(recipeDTOs);
         }
 
         // GET: api/Recipe/{id}
         [HttpGet("{id}")]
         public async Task<ActionResult<RecipeDTO>> GetRecipe(int id)
         {
-            var recipe = await _recipeService.GetRecipeByIdAsync(id);
+            var recipeDTO = await _recipeService.GetRecipeByIdAsync(id);
 
-            return Ok(recipe);
+            return Ok(recipeDTO);
         }
 
         // POST: api/Recipe

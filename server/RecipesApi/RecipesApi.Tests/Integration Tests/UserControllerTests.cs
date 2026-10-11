@@ -1,4 +1,5 @@
-﻿using RecipesApi.DTOs.User;
+﻿using Microsoft.OpenApi;
+using RecipesApi.DTOs.User;
 using System.Net;
 using System.Net.Http.Json;
 
@@ -183,12 +184,12 @@ namespace RecipesApi.Tests.Integration_Tests
             // Arrange
             var (client, userId) = await GetAuthenticatedClientAsync();
             var url = $"{apiURL}/{userId}";
-            
+
             var updateUserDTO = GetUpdateUserDTOAsync();
 
             // Act
             var response = await client.PutAsJsonAsync(url, updateUserDTO);
-            
+
             // Assert
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
             
@@ -358,7 +359,7 @@ namespace RecipesApi.Tests.Integration_Tests
 
         // ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- -----
 
-        private CreateUserDTO GetCreateUserDTOAsync(string? username = "Test", string? email = "test@example.com", string? password = "TestPassword123!")
+        private CreateUserDTO GetCreateUserDTOAsync(string? username = "Test", string? email = "test@example.com", string? password = basePassword)
         {
             var dto = new CreateUserDTO
             {
@@ -370,13 +371,14 @@ namespace RecipesApi.Tests.Integration_Tests
             return dto;
         }
 
-        private UpdateUserDTO GetUpdateUserDTOAsync(string? username = "Updated Test", string? email = "updatedTest@example.com", string? password = "TestPassword123!")
+        private UpdateUserDTO GetUpdateUserDTOAsync(string? username = "Updated Test", string? email = "updatedTest@example.com", string? newPassword = "NewTestPassword123!", string? oldPassword = basePassword)
         {
             var dto = new UpdateUserDTO
             {
                 Username = username,
                 Email = email,
-                Password = password
+                NewPassword = newPassword,
+                OldPassword = oldPassword
             };
 
             return dto;

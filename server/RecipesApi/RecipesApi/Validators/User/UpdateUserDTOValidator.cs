@@ -21,7 +21,7 @@ namespace RecipesApi.Validators.User
                 .NotEmpty().WithMessage("Adres email jest wymagany.")
                 .EmailAddress().WithMessage("Wprowadź poprawny adres email.");
 
-            RuleFor(x => x.Password)
+            RuleFor(x => x.NewPassword)
                 .NotEmpty().WithMessage("Hasło jest wymagane.")
                 .MinimumLength(minPasswordLength).WithMessage($"Hasło musi składać się przynajmniej z {minPasswordLength} znaków.")
                 .MaximumLength(maxPasswordLength).WithMessage($"Hasło musi składać się co najwyżej z {maxPasswordLength} znaków.")

@@ -42,6 +42,7 @@ builder.Services.AddScoped<IFileService, FileService>();
 
 builder.Services.AddScoped<IRecipeService, RecipeService>();
 builder.Services.AddScoped<IIngredientService, IngredientService>();
+builder.Services.AddScoped<IUserService, UserService>();
 
 // Przekaż ustawienia JWT
 builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("JwtSettings"));

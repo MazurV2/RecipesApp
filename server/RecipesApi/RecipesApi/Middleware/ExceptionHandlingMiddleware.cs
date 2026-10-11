@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
 
 namespace RecipesApi.Middleware
@@ -35,7 +36,7 @@ namespace RecipesApi.Middleware
                 KeyNotFoundException => StatusCodes.Status404NotFound,
                 ArgumentException => StatusCodes.Status400BadRequest,
                 BadHttpRequestException => StatusCodes.Status400BadRequest,
-                InvalidOperationException => StatusCodes.Status409Conflict,
+                ConflictException => StatusCodes.Status409Conflict,
                 _ => StatusCodes.Status500InternalServerError
             };
 

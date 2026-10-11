@@ -14,6 +14,8 @@ namespace RecipesApi.Tests.Integration_Tests
         protected readonly HttpClient _unauthorizedClient;
         protected readonly CustomWebApplicationFactory<Program> _factory;
 
+        protected const string basePassword = "TestPassword123!";
+
         public BaseIntegrationTests(CustomWebApplicationFactory<Program> factory)
         {
             _factory = factory;
@@ -32,7 +34,7 @@ namespace RecipesApi.Tests.Integration_Tests
             });
 
             var uniqueId = Guid.NewGuid().ToString("N")[..5];
-            var password = "TestPassword123!";
+            var password = basePassword;
 
             // Dodaj użytkownika do bazy danych
             var user = await AddUserToDatabaseAsync();
@@ -57,7 +59,7 @@ namespace RecipesApi.Tests.Integration_Tests
         // ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- -----
 
         // Dodaj użytkownika do bazy danych
-        protected async Task<User> AddUserToDatabaseAsync(string? username = null, string? email = null, string password = "TestPassword123!")
+        protected async Task<User> AddUserToDatabaseAsync(string? username = null, string? email = null, string password = basePassword)
         {
             // Sprawdź, czy użytkownik o podanej nazwie już istnieje
             if (username != null && await GetUserIfExistsAsync(username) is User existingUser)

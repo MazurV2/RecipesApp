@@ -54,10 +54,10 @@ namespace RecipesApi.Middleware
                     StatusCodes.Status409Conflict => "Conflict",
                     _ => "Internal Server Error"
                 },
-                //Detail = statusCode == StatusCodes.Status500InternalServerError
-                //    ? "An unexpected error has occurred."
-                //    : ex.Message
-                Detail = ex.Message
+                Detail = statusCode == StatusCodes.Status500InternalServerError
+                    ? "An unexpected error has occurred."
+                    : ex.Message
+                //Detail = ex.Message
             };
             
             var json = JsonSerializer.Serialize(problemDetails);

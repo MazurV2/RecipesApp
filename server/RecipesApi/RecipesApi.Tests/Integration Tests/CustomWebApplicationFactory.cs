@@ -30,10 +30,25 @@ namespace RecipesApi.Tests
             {
                 // Usuń istniejący DbContext
                 var descriptor = services.SingleOrDefault(
+                    d => d.ServiceType == typeof(AppDbContext)
+                );
+
+                if (descriptor != null) services.Remove(descriptor);
+
+                // Usuń opcje DbContext
+                var optionsDescriptor = services.SingleOrDefault(
                     d => d.ServiceType == typeof(DbContextOptions<AppDbContext>)
                 );
                 
-                if (descriptor != null) services.Remove(descriptor);
+                if (optionsDescriptor != null) services.Remove(optionsDescriptor);
+
+                // Usuń opcje
+                var options = services.SingleOrDefault(
+                    d => d.ServiceType == typeof(DbContextOptions)
+                );
+
+                if (options != null) services.Remove(options);
+
 
                 // Utwórz połączenie SQLite w pamięci
                 _connection = new SqliteConnection("DataSource=:memory:");

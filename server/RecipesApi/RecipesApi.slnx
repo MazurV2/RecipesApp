@@ -1,4 +1,7 @@
 <Solution>
+  <Project Path="docker-compose.dcproj">
+    <Build />
+  </Project>
   <Project Path="RecipesApi.Tests/RecipesApi.Tests.csproj" />
   <Project Path="RecipesApi/RecipesApi.csproj" />
 </Solution>

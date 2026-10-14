@@ -408,3 +408,5 @@ FodyWeavers.xsd
 *.db-shm
 *.db-wal
 /server/RecipesApi/RecipesApi.Tests/coveragereport
+server/RecipesApi/.env
+server/RecipesApi/docker-compose.override.yml

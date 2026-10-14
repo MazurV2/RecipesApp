@@ -87,8 +87,19 @@ builder.Services.AddOpenApi(options =>
 
 // AppDbContext configuration
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
-    //options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
+{
+    var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
+        ?? throw new InvalidOperationException("Brak connection stringa");
+
+    if (builder.Environment.IsEnvironment("Testing"))
+    {
+        options.UseSqlite(connectionString);
+    }
+    else
+    {
+        options.UseNpgsql(connectionString);
+    }
+});
 
 // Weryfikacja tokena
 builder.Services.AddAuthentication()

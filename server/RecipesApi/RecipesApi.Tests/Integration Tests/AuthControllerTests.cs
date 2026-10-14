@@ -62,7 +62,7 @@ namespace RecipesApi.Tests.Integration_Tests
 
         // Test rejestracji z istniejącym użytkownikiem
         [Fact]
-        public async Task Register_ExistingUser_ShouldReturnBadRequest()
+        public async Task Register_ExistingUser_ShouldReturnConflict()
         {
             // Arrange
             string password = "TestPassword123!";
@@ -81,7 +81,7 @@ namespace RecipesApi.Tests.Integration_Tests
             var response = await _unauthorizedClient.PostAsJsonAsync("/api/Auth/register", registerDTO);
 
             // Assert
-            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+            Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
         }
 
         // Test poprawnego logowania użytkownika
@@ -112,7 +112,7 @@ namespace RecipesApi.Tests.Integration_Tests
         [InlineData(true, "NonexistingPassword123!")] // Logowanie za pomocą nazwy użytkownika z błędnym hasłem
         [InlineData(false, "NonexistingPassword123!")] // Logowanie za pomocą adresu email z błędnym hasłem
         [InlineData(true, "TestPassword123!", "NonexistingUser")] // Logowanie na nieistniejącego użytkownika
-        public async Task Login_InvalidData_ShouldReturnUnauthorized(bool useUsername, string password, string? nonexistentUsername = null)
+        public async Task Login_InvalidData_ShouldReturnForbidden(bool useUsername, string password, string? nonexistentUsername = null)
         {
             // Arrange
             var userPassword = "TestPassword123!";
@@ -128,7 +128,7 @@ namespace RecipesApi.Tests.Integration_Tests
             var response = await _unauthorizedClient.PostAsJsonAsync("/api/Auth/login", loginDTO);
             
             // Assert
-            Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+            Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
         }
 
         // ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- -----

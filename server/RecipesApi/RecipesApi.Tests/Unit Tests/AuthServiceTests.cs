@@ -36,7 +36,7 @@ namespace RecipesApi.Tests.Unit_Tests
         }
 
         [Fact]
-        public async Task Register_ValidRegisterData_ShouldReturnSuccess()
+        public async Task Register_ValidRegisterData_ShouldReturnUserDTO()
         {
             // Arrange
             var registerDTO = new RegisterDTO
@@ -51,12 +51,11 @@ namespace RecipesApi.Tests.Unit_Tests
 
             // Assert
             // Sprawdź wynik rejestracji
-            Assert.True(result.IsSuccess);
+            Assert.NotNull(result);
             
             // Sprawdź, czy dane użytkownika są poprawne
-            Assert.NotNull(result.Data);
-            Assert.Equal(registerDTO.Username, result.Data.Username);
-            Assert.Equal(registerDTO.Email, result.Data.Email);
+            Assert.Equal(registerDTO.Username, result.Username);
+            Assert.Equal(registerDTO.Email, result.Email);
 
             // Sprawdź, czy użytkownik został dodany do bazy danych
             var userInDb = await _context.Users.FirstOrDefaultAsync(u => u.Username == registerDTO.Username);
@@ -64,7 +63,7 @@ namespace RecipesApi.Tests.Unit_Tests
         }
 
         [Fact]
-        public async Task Register_NameExists_ShouldReturnFailure()
+        public async Task Register_NameExists_ShouldThrowConflictException()
         {
             // Arrange
             var registerDTO = new RegisterDTO
@@ -84,15 +83,13 @@ namespace RecipesApi.Tests.Unit_Tests
             await _context.SaveChangesAsync();
 
             // Act
-            var result = await _authService.Register(registerDTO);
 
             // Assert
-            Assert.False(result.IsSuccess);
-            Assert.False(string.IsNullOrWhiteSpace(result.ResultMessage));
+            await Assert.ThrowsAsync<ConflictException>(() => _authService.Register(registerDTO));
         }
 
         [Fact]
-        public async Task Register_EmailExists_ShouldReturnFailure()
+        public async Task Register_EmailExists_ShouldThrowConflictException()
         {
             // Arrange
             var registerDTO = new RegisterDTO
@@ -112,15 +109,13 @@ namespace RecipesApi.Tests.Unit_Tests
             await _context.SaveChangesAsync();
 
             // Act
-            var result = await _authService.Register(registerDTO);
 
             // Assert
-            Assert.False(result.IsSuccess);
-            Assert.False(string.IsNullOrWhiteSpace(result.ResultMessage));
+            await Assert.ThrowsAsync<ConflictException>(() => _authService.Register(registerDTO));
         }
 
         [Fact]
-        public async Task Login_ValidUsernameAndPassword_ShouldReturnSuccessWithToken()
+        public async Task Login_ValidUsernameAndPassword_ShouldReturnToken()
         {
             // Arrange
             var loginDTO = new LoginDTO
@@ -143,14 +138,13 @@ namespace RecipesApi.Tests.Unit_Tests
             var result = await _authService.Login(loginDTO);
 
             // Assert
-            Assert.True(result.IsSuccess);
-            Assert.NotNull(result.Data);
-            Assert.False(string.IsNullOrWhiteSpace(result.Data.Token));
-            Assert.True(result.Data.ExpiryDate > DateTime.UtcNow);
+            Assert.NotNull(result);
+            Assert.False(string.IsNullOrWhiteSpace(result.Token));
+            Assert.True(result.ExpiryDate > DateTime.UtcNow);
         }
 
         [Fact]
-        public async Task Login_ValidEmailAndPassword_ShouldReturnSuccessWithToken()
+        public async Task Login_ValidEmailAndPassword_ShouldReturnToken()
         {
             // Arrange
             var loginDTO = new LoginDTO
@@ -173,14 +167,13 @@ namespace RecipesApi.Tests.Unit_Tests
             var result = await _authService.Login(loginDTO);
 
             // Assert
-            Assert.True(result.IsSuccess);
-            Assert.NotNull(result.Data);
-            Assert.False(string.IsNullOrWhiteSpace(result.Data.Token));
-            Assert.True(result.Data.ExpiryDate > DateTime.UtcNow);
+            Assert.NotNull(result);
+            Assert.False(string.IsNullOrWhiteSpace(result.Token));
+            Assert.True(result.ExpiryDate > DateTime.UtcNow);
         }
 
         [Fact]
-        public async Task Login_InvalidUsernameOrEmail_ShouldReturnFailure()
+        public async Task Login_InvalidUsernameOrEmail_ShouldThrowUnauthorizedAccessException()
         {
             // Arrange
             var loginDTO = new LoginDTO
@@ -200,15 +193,13 @@ namespace RecipesApi.Tests.Unit_Tests
             await _context.SaveChangesAsync();
 
             // Act
-            var result = await _authService.Login(loginDTO);
-            
+
             // Assert
-            Assert.False(result.IsSuccess);
-            Assert.False(string.IsNullOrWhiteSpace(result.ResultMessage));
+            await Assert.ThrowsAsync<UnauthorizedAccessException>(() => _authService.Login(loginDTO));
         }
 
         [Fact]
-        public async Task Login_InvalidPassword_ShouldReturnFailure()
+        public async Task Login_InvalidPassword_ShouldThrowUnauthorizedAccessException()
         {
             // Arrange
             var loginDTO = new LoginDTO
@@ -228,11 +219,9 @@ namespace RecipesApi.Tests.Unit_Tests
             await _context.SaveChangesAsync();
 
             // Act
-            var result = await _authService.Login(loginDTO);
 
             // Assert
-            Assert.False(result.IsSuccess);
-            Assert.False(string.IsNullOrWhiteSpace(result.ResultMessage));
+            await Assert.ThrowsAsync<UnauthorizedAccessException>(() => _authService.Login(loginDTO));
         }
 
         public void Dispose()

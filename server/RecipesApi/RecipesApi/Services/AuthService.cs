@@ -1,5 +1,4 @@
-﻿using FluentValidation;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using RecipesApi.DTOs.Auth;
 using RecipesApi.DTOs.User;
 using RecipesApi.Entities;
@@ -18,17 +17,17 @@ namespace RecipesApi.Services
             _tokenService = tokenService;
         }
 
-        public async Task<ServiceResult<UserDTO>> Register(RegisterDTO registerDTO)
+        public async Task<UserDTO> Register(RegisterDTO registerDTO)
         {
             // Sprawdź, czy użytkownik o podanej nazwie lub emailu już istnieje
             if (await _context.Users.AnyAsync(u => u.Username == registerDTO.Username))
             {
-                return ServiceResult<UserDTO>.Failure("Użytkownik o podanej nazwie już istnieje.");
+                throw new ConflictException("Użytkownik o podanej nazwie już istnieje.");
             }
 
             if (await _context.Users.AnyAsync(u => u.Email == registerDTO.Email))
             {
-                return ServiceResult<UserDTO>.Failure("Użytkownik o podanym emailu już istnieje.");
+                throw new ConflictException("Użytkownik o podanym emailu już istnieje.");
             }
 
             // Zaszyfruj hasło
@@ -54,20 +53,20 @@ namespace RecipesApi.Services
                 Email = user.Email
             };
 
-            return ServiceResult<UserDTO>.Success(userDTO);
+            return userDTO;
         }
     
-        public async Task<ServiceResult<AuthResponseDTO>> Login(LoginDTO loginDTO)
+        public async Task<AuthResponseDTO> Login(LoginDTO loginDTO)
         {
             // Znajdź użytkownika na podstawie nazwy użytkownika lub adresu e-mail
             var user = await _context.Users.FirstOrDefaultAsync(
                 u => u.Username == loginDTO.UsernameOrEmail || u.Email == loginDTO.UsernameOrEmail
-                );
+            );
 
             // Sprawdź, czy użytkownik istnieje i czy hasło jest poprawne
             if (user == null || !BCrypt.Net.BCrypt.Verify(loginDTO.Password, user.PasswordHash))
             {
-                return ServiceResult<AuthResponseDTO>.Failure("Wprowadzono nieprawidłowy login/email lub hasło.");
+                throw new UnauthorizedAccessException("Wprowadzono nieprawidłowy login/email lub hasło.");
             }
 
             // Wygenerowanie tokenu JWT
@@ -79,7 +78,7 @@ namespace RecipesApi.Services
                 ExpiryDate = expiryDate
             };
 
-            return ServiceResult<AuthResponseDTO>.Success(response);
+            return response;
         }
 
         

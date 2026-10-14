@@ -1,5 +1,4 @@
-﻿using FluentValidation;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using RecipesApi.DTOs.Auth;
 using RecipesApi.DTOs.User;
 using RecipesApi.Services.Interfaces;
@@ -24,12 +23,7 @@ namespace RecipesApi.Controllers
         {
             var result = await _authService.Register(registerDTO);
 
-            if (!result.IsSuccess)
-            {
-                return BadRequest(result.ResultMessage);
-            }
-
-            return Ok(result.Data);
+            return Ok(result);
         }
 
         // POST: api/Auth/login
@@ -38,12 +32,7 @@ namespace RecipesApi.Controllers
         {
             var result = await _authService.Login(loginDTO);
 
-            if (!result.IsSuccess)
-            {
-                return Unauthorized(result.ResultMessage);
-            }
-
-            return Ok(result.Data);
+            return Ok(result);
         }
     }
 }

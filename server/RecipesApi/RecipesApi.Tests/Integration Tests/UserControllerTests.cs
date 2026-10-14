@@ -359,7 +359,7 @@ namespace RecipesApi.Tests.Integration_Tests
 
         // ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- -----
 
-        private CreateUserDTO GetCreateUserDTOAsync(string? username = "Test", string? email = "test@example.com", string? password = basePassword)
+        private CreateUserDTO GetCreateUserDTOAsync(string username = "Test", string email = "test@example.com", string password = basePassword)
         {
             var dto = new CreateUserDTO
             {
@@ -371,7 +371,7 @@ namespace RecipesApi.Tests.Integration_Tests
             return dto;
         }
 
-        private UpdateUserDTO GetUpdateUserDTOAsync(string? username = "Updated Test", string? email = "updatedTest@example.com", string? newPassword = "NewTestPassword123!", string? oldPassword = basePassword)
+        private UpdateUserDTO GetUpdateUserDTOAsync(string username = "Updated Test", string email = "updatedTest@example.com", string newPassword = "NewTestPassword123!", string oldPassword = basePassword)
         {
             var dto = new UpdateUserDTO
             {

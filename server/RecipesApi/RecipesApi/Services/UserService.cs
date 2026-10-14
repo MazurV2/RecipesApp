@@ -70,7 +70,7 @@ namespace RecipesApi.Services
 
         public async Task<UserDTO> UpdateUserAsync(int id, UpdateUserDTO updateUserDTO, int userId)
         {
-            if (userId == null || userId != id)
+            if (userId != id)
             {
                 throw new UnauthorizedAccessException("Nie masz uprawnień do zaktualizowania tego użytkownika");
             }
@@ -107,7 +107,7 @@ namespace RecipesApi.Services
 
         public async Task DeleteUserAsync(int id, int userId)
         {
-            if (userId == null || userId != id)
+            if (userId != id)
             {
                 throw new UnauthorizedAccessException("Nie masz uprawnień do usunięcia tego użytkownika");
             }

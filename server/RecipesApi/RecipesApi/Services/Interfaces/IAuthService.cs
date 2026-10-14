@@ -5,7 +5,7 @@ namespace RecipesApi.Services.Interfaces
 {
     public interface IAuthService
     {
-        public Task<ServiceResult<UserDTO>> Register(RegisterDTO registerDTO);
-        public Task<ServiceResult<AuthResponseDTO>> Login(LoginDTO loginDTO);
+        public Task<UserDTO> Register(RegisterDTO registerDTO);
+        public Task<AuthResponseDTO> Login(LoginDTO loginDTO);
     }
 }
